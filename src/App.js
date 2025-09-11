@@ -1,93 +1,63 @@
-﻿import { useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+﻿import { useEffect, useState, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { supabase } from "./supabaseClient";
+
+// Custom icon για τα markers
+const musicIcon = new L.Icon({
+    iconUrl: "/mark.png",
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32],
+});
+
+// Component για να κινείται ο χάρτης στις συντεταγμένες
+function MapMover({ position }) {
+    const map = useMap();
+    useEffect(() => {
+        if (position) {
+            map.setView(position, 13, { animate: true });
+        }
+    }, [position, map]);
+    return null;
+}
 
 export default function App() {
-    const [events, setEvents] = useState([
-        {
-            id: 1,
-            village: "Βυτίνα",
-            date: "2025-09-15",
-            group: "Ορχήστρα Γορτυνίας",
-            artists: ["Γιάννης Παπαδόπουλος", "Μαρία Κωνσταντίνου"],
-            position: [37.6712, 22.1826],
-        },
-        {
-            id: 2,
-            village: "Δημητσάνα",
-            date: "2025-09-20",
-            group: "Παραδοσιακή Κομπανία",
-            artists: ["Κώστας Νικολάου"],
-            position: [37.5961, 22.0396],
-        },
-        {
-            id: 3,
-            village: "Ελληνικό",
-            date: "2025-09-22",
-            group: "Παραδοσιακή Ορχήστρα",
-            artists: ["Γιώργος Παπαδόπουλος", "Ελένη Κωνσταντίνου"],
-            position: [37.6788, 22.1270],
-        },
-        {
-            id: 4,
-            village: "Αράχωβα",
-            date: "2025-09-25",
-            group: "Λαϊκή Ορχήστρα",
-            artists: ["Αλέξανδρος Νικολάου", "Μαρία Παπαδοπούλου"],
-            position: [37.6115, 21.9888],
-        },
-        {
-            id: 5,
-            village: "Μαγούλιανα",
-            date: "2025-09-28",
-            group: "Ορχήστρα Παράδοσης",
-            artists: ["Κώστας Παπαδόπουλος", "Αντωνία Κωνσταντίνου"],
-            position: [37.6788, 22.1270],
-        },
-        {
-            id: 6,
-            village: "Στεμνίτσα",
-            date: "2025-10-05",
-            group: "Παραδοσιακή Μουσική",
-            artists: ["Γιάννης Νικολάου", "Ελένη Παπαδοπούλου"],
-            position: [37.5564, 22.0828],
-        },
-    ]);
+    const [villages, setVillages] = useState([]);
+    const [selectedPosition, setSelectedPosition] = useState(null);
 
-    const musicIcon = new L.Icon({
-        iconUrl: "/mark.png", // από τον φάκελο public
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32],
-    });
-
-    // Συνάρτηση για ενημέρωση συντεταγμένων στο state μετά το drag
-    const handleDragEnd = (event, id) => {
-        const marker = event.target;
-        const newPos = marker.getLatLng();
-        console.log(`Νέες συντεταγμένες για το marker ${id}:`, newPos.lat, newPos.lng);
-
-        // Προαιρετικά: ενημέρωση state για να αποθηκευτούν οι νέες συντεταγμένες
-        setEvents((prevEvents) =>
-            prevEvents.map((e) =>
-                e.id === id ? { ...e, position: [newPos.lat, newPos.lng] } : e
-            )
-        );
-    };
+    // Φόρτωσε δεδομένα από Supabase
+    useEffect(() => {
+        const fetchVillages = async () => {
+            let { data, error } = await supabase
+                .from("Villages")
+                .select("village_name, village_lat, village_lon, id");
+            if (error) {
+                console.error(error);
+            } else {
+                console.log(data); // δες τι επιστρέφει η βάση
+                setVillages(data);
+            }
+        };
+        fetchVillages();
+    }, []);
 
     return (
         <div className="flex flex-col md:flex-row h-screen">
-            {/* Sidebar με λίστα εκδηλώσεων */}
+            {/* Sidebar */}
             <div className="w-full md:w-1/3 bg-white shadow-lg p-4 overflow-y-auto">
-                <h1 className="text-xl font-bold mb-4">Πανηγύρια Γορτυνίας</h1>
-                {events.map((e) => (
-                    <div key={e.id} className="mb-4 border-b pb-2">
-                        <h2 className="font-semibold">{e.village}</h2>
-                        <p>📅 {e.date}</p>
-                        <p>🎶 {e.group}</p>
-                        <p>👤 {e.artists.join(", ")}</p>
-                        <p>📍 Συντεταγμένες: {e.position[0].toFixed(4)}, {e.position[1].toFixed(4)}</p>
+                <h1 className="text-xl font-bold mb-4">Χωριά Γορτυνίας</h1>
+                {villages.map((v) => (
+                    <div
+                        key={v.id}
+                        className="mb-4 border-b pb-2 cursor-pointer hover:bg-gray-100 p-2 rounded"
+                        onClick={() =>
+                            setSelectedPosition([v.village_lat, v.village_lon])
+                        }
+                    >
+                        <h2 className="font-semibold">{v.village_name}</h2>
+                        <p>📍 Συντεταγμένες: {v.village_lat}, {v.village_lon}</p>
                     </div>
                 ))}
             </div>
@@ -99,23 +69,18 @@ export default function App() {
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
-                    {events.map((e) => (
+                    {villages.map((v) => (
                         <Marker
-                            key={e.id}
-                            position={e.position}
+                            key={v.id}
+                            position={[v.village_lat, v.village_lon]}
                             icon={musicIcon}
-                            draggable={true}
-                            eventHandlers={{
-                                dragend: (event) => handleDragEnd(event, e.id),
-                            }}
                         >
                             <Popup>
-                                <strong>{e.village}</strong>
-                                <br />📅 {e.date}
-                                <br />🎶 {e.group}
+                                <strong>{v.village_name}</strong>
                             </Popup>
                         </Marker>
                     ))}
+                    {selectedPosition && <MapMover position={selectedPosition} />}
                 </MapContainer>
             </div>
         </div>
