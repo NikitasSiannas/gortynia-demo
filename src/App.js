@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -27,16 +27,27 @@ export default function App() {
     const [villages, setVillages] = useState([]);
     const [selectedPosition, setSelectedPosition] = useState(null);
 
-    // Φόρτωσε δεδομένα από Supabase
+    // Φόρτωσε δεδομένα από Supabase (Villages + Festivals)
     useEffect(() => {
         const fetchVillages = async () => {
             let { data, error } = await supabase
                 .from("Villages")
-                .select("village_name, village_lat, village_lon, id");
+                .select(`
+          village_id,
+          village_name,
+          village_lat,
+          village_lon,
+          Festivals (
+            festival_id,
+            festival_type,
+            festival_date
+          )
+        `);
+
             if (error) {
                 console.error(error);
             } else {
-                console.log(data); // δες τι επιστρέφει η βάση
+                console.log("Villages + Festivals:", data);
                 setVillages(data);
             }
         };
@@ -50,7 +61,7 @@ export default function App() {
                 <h1 className="text-xl font-bold mb-4">Χωριά Γορτυνίας</h1>
                 {villages.map((v) => (
                     <div
-                        key={v.id}
+                        key={v.village_id}
                         className="mb-4 border-b pb-2 cursor-pointer hover:bg-gray-100 p-2 rounded"
                         onClick={() =>
                             setSelectedPosition([v.village_lat, v.village_lon])
@@ -58,6 +69,17 @@ export default function App() {
                     >
                         <h2 className="font-semibold">{v.village_name}</h2>
                         <p>📍 Συντεταγμένες: {v.village_lat}, {v.village_lon}</p>
+
+                        {v.Festivals && v.Festivals.length > 0 ? (
+                            v.Festivals.map((f) => (
+                                <div key={f.festival_id} className="mt-2 text-sm text-gray-700">
+                                    🎉 {f.festival_type} —{" "}
+                                    {new Date(f.festival_date).toLocaleDateString("el-GR")}
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-sm text-gray-500">Δεν υπάρχουν εκδηλώσεις</p>
+                        )}
                     </div>
                 ))}
             </div>
@@ -69,17 +91,32 @@ export default function App() {
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
+
                     {villages.map((v) => (
                         <Marker
-                            key={v.id}
+                            key={v.village_id}
                             position={[v.village_lat, v.village_lon]}
                             icon={musicIcon}
                         >
                             <Popup>
                                 <strong>{v.village_name}</strong>
+                                <br />
+                                📍 {v.village_lat}, {v.village_lon}
+                                <br />
+                                {v.Festivals && v.Festivals.length > 0 ? (
+                                    v.Festivals.map((f) => (
+                                        <div key={f.festival_id}>
+                                            🎉 {f.festival_type} —{" "}
+                                            {new Date(f.festival_date).toLocaleDateString("el-GR")}
+                                        </div>
+                                    ))
+                                ) : (
+                                    "Δεν υπάρχουν εκδηλώσεις"
+                                )}
                             </Popup>
                         </Marker>
                     ))}
+
                     {selectedPosition && <MapMover position={selectedPosition} />}
                 </MapContainer>
             </div>
