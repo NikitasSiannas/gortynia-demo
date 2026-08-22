@@ -37,6 +37,37 @@ function formatDate(isoDate) {
     });
 }
 
+function CelebrationRoles({ celebration }) {
+    return (
+        <>
+            {celebration.DJ && (
+                <div className="flex items-center gap-1">🎧 DJ: {celebration.DJ}</div>
+            )}
+            {celebration.front_singer && (
+                <div className="flex items-center gap-1">🎤 Τραγουδιστής: {celebration.front_singer}</div>
+            )}
+            {celebration.clarinet_player && (
+                <div className="flex items-center gap-1">
+                    <img src="/clarinet.png" alt="Κλαρίνο" className="w-4 h-4 object-contain" />
+                    Κλαρίνο: {celebration.clarinet_player}
+                </div>
+            )}
+            {celebration.violin_player && (
+                <div className="flex items-center gap-1">
+                    <img src="/violin.png" alt="Βιολί" className="w-4 h-4 object-contain" />
+                    Βιολί: {celebration.violin_player}
+                </div>
+            )}
+            {celebration.bouzouki_player && (
+                <div className="flex items-center gap-1">
+                    <img src="/bouzouki.png" alt="Μπουζούκι" className="w-4 h-4 object-contain" />
+                    Μπουζούκι: {celebration.bouzouki_player}
+                </div>
+            )}
+        </>
+    );
+}
+
 // Ελάχιστος CSV parser: αρκετός για τα δικά μας αρχεία (χωρίς κόμματα μέσα σε πεδία)
 function parseCsv(text) {
     const lines = text.replace(/^﻿/, "").trim().split(/\r?\n/);
@@ -64,6 +95,8 @@ function MapMover({ position }) {
 export default function App() {
     const [villages, setVillages] = useState([]);
     const [selectedPosition, setSelectedPosition] = useState(null);
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
 
     useEffect(() => {
         const load = async () => {
@@ -96,12 +129,71 @@ export default function App() {
         load();
     }, []);
 
+    // "Από" μόνο ή "Έως" μόνο = συγκεκριμένη ημέρα. Και τα δύο = εύρος ημερομηνιών.
+    const effectiveFrom = dateFrom || dateTo;
+    const effectiveTo = dateTo || dateFrom;
+    const [rangeStart, rangeEnd] =
+        effectiveFrom && effectiveTo && effectiveFrom > effectiveTo
+            ? [effectiveTo, effectiveFrom]
+            : [effectiveFrom, effectiveTo];
+    const hasDateFilter = Boolean(rangeStart || rangeEnd);
+
+    const displayedVillages = villages
+        .filter((v) => {
+            if (!hasDateFilter) return true;
+            if (!v.celebration) return false;
+            const d = v.celebration.celebration_date;
+            if (rangeStart && d < rangeStart) return false;
+            if (rangeEnd && d > rangeEnd) return false;
+            return true;
+        })
+        .sort((a, b) => {
+            const da = a.celebration?.celebration_date;
+            const db = b.celebration?.celebration_date;
+            if (da && db) return da.localeCompare(db);
+            if (da) return -1;
+            if (db) return 1;
+            return a.name.localeCompare(b.name, "el");
+        });
+
     return (
         <div className="flex flex-col md:flex-row h-screen">
             {/* Sidebar */}
             <div className="w-full md:w-1/3 bg-white shadow-lg p-4 overflow-y-auto">
                 <h1 className="text-xl font-bold mb-4">Χωριά Γορτυνίας</h1>
-                {villages.map((v) => {
+
+                <div className="mb-4 flex flex-wrap items-end gap-2 text-sm">
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-500 mb-1" htmlFor="date-from">Από</label>
+                        <input
+                            id="date-from"
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="border rounded px-2 py-1"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-500 mb-1" htmlFor="date-to">Έως</label>
+                        <input
+                            id="date-to"
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="border rounded px-2 py-1"
+                        />
+                    </div>
+                    {hasDateFilter && (
+                        <button
+                            onClick={() => { setDateFrom(""); setDateTo(""); }}
+                            className="text-xs text-gray-500 underline px-2 py-1"
+                        >
+                            Καθαρισμός
+                        </button>
+                    )}
+                </div>
+
+                {displayedVillages.map((v) => {
                     const style = v.celebration
                         ? CELEBRATION_STYLE[v.celebration.celebration_type] || DEFAULT_STYLE
                         : DEFAULT_STYLE;
@@ -130,15 +222,7 @@ export default function App() {
                             {v.celebration ? (
                                 <div className="mt-2 text-sm text-gray-600 space-y-0.5">
                                     <p>📅 {formatDate(v.celebration.celebration_date)}</p>
-                                    <p>🎤 Τραγουδιστής: {v.celebration.front_singer}</p>
-                                    <p className="flex items-center gap-1">
-                                        <img src="/clarinet.png" alt="Κλαρίνο" className="w-4 h-4 object-contain" />
-                                        Κλαρίνο: {v.celebration.clarinet_player}
-                                    </p>
-                                    <p className="flex items-center gap-1">
-                                        <img src="/violin.png" alt="Βιολί" className="w-4 h-4 object-contain" />
-                                        Βιολί: {v.celebration.violin_player}
-                                    </p>
+                                    <CelebrationRoles celebration={v.celebration} />
                                 </div>
                             ) : (
                                 <p className="mt-2 text-sm text-gray-400">Δεν υπάρχουν εκδηλώσεις</p>
@@ -156,7 +240,7 @@ export default function App() {
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
 
-                    {villages.map((v) => (
+                    {displayedVillages.map((v) => (
                         <Marker
                             key={v.id}
                             position={[v.lat, v.lon]}
@@ -183,15 +267,7 @@ export default function App() {
                                             {v.celebration.celebration_type}
                                         </div>
                                         <div>📅 {formatDate(v.celebration.celebration_date)}</div>
-                                        <div>🎤 {v.celebration.front_singer}</div>
-                                        <div className="flex items-center gap-1">
-                                            <img src="/clarinet.png" alt="Κλαρίνο" className="w-4 h-4 object-contain" />
-                                            Κλαρίνο: {v.celebration.clarinet_player}
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <img src="/violin.png" alt="Βιολί" className="w-4 h-4 object-contain" />
-                                            Βιολί: {v.celebration.violin_player}
-                                        </div>
+                                        <CelebrationRoles celebration={v.celebration} />
                                     </div>
                                 ) : (
                                     <div className="text-sm mt-1">Δεν υπάρχουν εκδηλώσεις</div>
