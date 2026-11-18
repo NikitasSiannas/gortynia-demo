@@ -2,16 +2,165 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+    html { color-scheme: light; }
+    html.dark { color-scheme: dark; }
+    body {
+        @apply font-sans antialiased bg-stone-900 dark:bg-black;
+        -webkit-tap-highlight-color: transparent;
+    }
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+@layer components {
+    .field {
+        @apply w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-stone-800 placeholder-stone-400
+               outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20
+               dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder-stone-500;
+    }
+    .label {
+        @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400;
+    }
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2 rounded-full bg-stone-900 px-5 py-2.5 font-medium text-white
+               shadow-md transition hover:bg-stone-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50
+               dark:bg-amber-500 dark:text-stone-900 dark:hover:bg-amber-400;
+    }
+    .btn-accent {
+        @apply inline-flex items-center justify-center gap-1.5 rounded-full bg-amber-500 px-4 py-2.5 font-semibold text-stone-900
+               shadow-lg shadow-amber-900/30 transition hover:bg-amber-400 hover:-translate-y-0.5 active:scale-[0.97];
+    }
+    .btn-glass {
+        @apply rounded-full bg-white/20 px-4 py-2.5 font-medium text-white ring-1 ring-white/40 backdrop-blur-md transition hover:bg-white/30;
+    }
+    .btn-ghost {
+        @apply inline-flex items-center justify-center rounded-full px-5 py-2.5 font-medium text-stone-600 transition hover:bg-stone-100
+               dark:text-stone-300 dark:hover:bg-stone-800;
+    }
+    .btn-soft {
+        @apply flex items-center justify-center gap-2 rounded-xl bg-stone-100 px-3 py-2.5 text-sm font-medium text-stone-700 transition
+               hover:bg-stone-200 active:scale-[0.97] dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700;
+    }
+    /* Εικονίδιο οργάνου μέσα σε λευκό κύκλο, για να φαίνεται πάνω σε χρωματιστό φόντο */
+    .icon-badge {
+        @apply inline-flex shrink-0 items-center justify-center rounded-full bg-white;
+    }
+}
+
+/* ---------- Φόντο με αργό ζουμ (Ken Burns) ---------- */
+.hero-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 40%;
+    animation: ken-burns 40s ease-in-out infinite alternate;
+    will-change: transform, opacity;
+}
+@keyframes ken-burns {
+    from { transform: scale(1) translate(0, 0); }
+    to   { transform: scale(1.12) translate(-2%, -1.5%); }
+}
+
+/* ---------- Σημάδια χάρτη ---------- */
+.event-marker {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: white;
+    border: 3.5px solid var(--c);
+    box-shadow: 0 0 0 1.5px white, 0 3px 10px rgba(0, 0, 0, 0.35);
+    animation: marker-drop 0.5s cubic-bezier(.2, 1.4, .4, 1) both;
+    transition: transform 0.2s ease;
+}
+.event-marker:hover { transform: scale(1.15); }
+.event-marker.is-active { box-shadow: 0 0 0 1.5px white, 0 0 0 6px rgba(245, 158, 11, 0.6), 0 6px 18px rgba(0, 0, 0, 0.4); }
+.event-marker img { width: 72%; height: 72%; object-fit: contain; pointer-events: none; }
+.event-marker-ring {
+    position: absolute;
+    inset: -3px;
+    border-radius: 9999px;
+    border: 3px solid var(--c);
+    animation: marker-ring 1.8s ease-out infinite;
+}
+.village-dot {
+    width: 12px; height: 12px; border-radius: 9999px;
+    background: #a8a29e; border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+@keyframes marker-drop {
+    from { opacity: 0; transform: translateY(-18px) scale(0.6); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes marker-ring {
+    from { opacity: 0.8; transform: scale(1); }
+    to   { opacity: 0; transform: scale(1.9); }
+}
+
+/* Ομάδες σημαδιών: δακτύλιος με την αναλογία των τύπων + αριθμός */
+.event-cluster {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+    animation: marker-drop 0.45s cubic-bezier(.2, 1.4, .4, 1) both;
+    transition: transform 0.2s ease;
+}
+.event-cluster:hover { transform: scale(1.1); }
+.event-cluster span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72%;
+    height: 72%;
+    border-radius: 9999px;
+    background: white;
+    color: #1c1917;
+    font: 700 14px/1 Manrope, system-ui, sans-serif;
+}
+.leaflet-cluster-anim .leaflet-marker-icon,
+.leaflet-cluster-anim .leaflet-marker-shadow { transition: transform 0.3s ease-out, opacity 0.3s ease-in; }
+
+/* Πιο απαλά χρώματα στον χάρτη για να ξεχωρίζουν τα σημάδια */
+.leaflet-tile-pane { filter: saturate(0.7) brightness(1.03); transition: filter 0.6s ease; }
+.leaflet-container { background: #e7e5e4; font-family: Manrope, system-ui, sans-serif; }
+/* Σκοτεινός χάρτης τη νύχτα */
+.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.4); }
+.dark .leaflet-container { background: #1c1917; }
+.dark .leaflet-control-attribution { background: rgba(28, 25, 23, 0.8); color: #a8a29e; }
+.dark .leaflet-control-attribution a { color: #fbbf24; }
+
+/* ---------- Popup του Leaflet ---------- */
+.leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+.leaflet-popup-content { margin: 12px 14px; min-width: 190px; }
+.popup-title { font-family: "GFS Didot", Georgia, serif; font-size: 18px; color: #1c1917; }
+.popup-region { font-size: 11px; color: #78716c; margin-bottom: 4px; }
+.popup-empty { font-size: 13px; color: #78716c; }
+.popup-event {
+    display: block; width: 100%; text-align: left; margin-top: 6px; padding: 6px 8px;
+    border: 0; border-left: 4px solid; border-radius: 8px; background: #f5f5f4; cursor: pointer;
+    transition: background 0.15s ease;
+}
+.popup-event:hover { background: #e7e5e4; }
+.popup-type { display: block; font-weight: 700; font-size: 13px; }
+.popup-date { display: block; font-size: 12px; color: #57534e; }
+.popup-pending { display: block; font-size: 11px; color: #b45309; font-weight: 600; }
+.dark .leaflet-popup-content-wrapper, .dark .leaflet-popup-tip { background: #1c1917; color: #f5f5f4; }
+.dark .popup-title { color: #fafaf9; }
+.dark .popup-event { background: #292524; }
+.dark .popup-event:hover { background: #44403c; }
+.dark .popup-date { color: #d6d3d1; }
+.dark .popup-type { filter: brightness(1.6); }
+.dark .leaflet-container a.leaflet-popup-close-button { color: #a8a29e; }
+
+/* Σεβόμαστε όσους έχουν απενεργοποιήσει τα κινούμενα εφέ στη συσκευή τους */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

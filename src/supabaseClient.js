@@ -1,6 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = "https://oysvhglgsquxewmqfdyk.supabase.co";
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95c3ZoZ2xnc3F1eGV3bXFmZHlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2MTA5OTMsImV4cCI6MjA3MzE4Njk5M30.DB0t-ej7setK0fPacySDwFm5PokDeDjXidqCJp9pPjI";
+// Τα στοιχεία μπαίνουν στο αρχείο .env.local (τοπικά) και στο Vercel → Settings → Environment Variables.
+// Το "anon"/"publishable" key είναι δημόσιο από τη φύση του — η ασφάλεια γίνεται με τα RLS policies (supabase/schema.sql).
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Αν δεν έχει ρυθμιστεί Supabase, η εφαρμογή δουλεύει μόνο για ανάγνωση από τα CSV.
+export const supabase =
+    supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;

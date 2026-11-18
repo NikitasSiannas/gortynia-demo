@@ -1,70 +1,101 @@
-# Getting Started with Create React App
+# Πανηγύρια Γορτυνίας
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Χάρτης με τα πανηγύρια, τις λαϊκές βραδιές και τα πάρτυ νεολαίας στα χωριά της Γορτυνίας και της υπόλοιπης Αρκαδίας.
+Εγκαθίσταται στο κινητό σαν εφαρμογή (PWA), στέλνει ειδοποιήσεις, και οι χρήστες προτείνουν εκδηλώσεις που εγκρίνει ο διαχειριστής.
 
-## Available Scripts
+Ζωντανά: https://gortynia-demo.vercel.app
 
-In the project directory, you can run:
+**Τεχνολογίες:** React · Leaflet (+ markercluster) · Tailwind · [Supabase](https://supabase.com) (βάση & σύνδεση, δωρεάν) · Vercel (φιλοξενία & serverless)
 
-### `npm start`
+## Τοπική εκτέλεση
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```
+npm install      # μόνο την πρώτη φορά
+npm start        # http://localhost:3000  (από κινητό στο ίδιο Wi-Fi: http://<IP-υπολογιστή>:3000)
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Χωρίς ρυθμισμένο Supabase η εφαρμογή δουλεύει **μόνο για ανάγνωση**, με τα `public/villages.csv` και `public/celebrations.csv`.
+Η εγκατάσταση ως εφαρμογή και οι ειδοποιήσεις δουλεύουν μόνο στη δημοσιευμένη έκδοση (https).
 
-### `npm test`
+## Ρύθμιση — μία φορά
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 1. Supabase
+1. [supabase.com](https://supabase.com) → *New project* (Free, *Central EU (Frankfurt)*).
+2. *SQL Editor* → *New query* → επικόλληση του [supabase/schema.sql](supabase/schema.sql) → *Run*.
+3. Νέο query με το [supabase/seed.sql](supabase/seed.sql) → *Run* (100 χωριά, 104 εκδηλώσεις).
+4. **Ορισμός διαχειριστή** — νέο query με το δικό σας email:
+   ```sql
+   insert into public.admins (email) values ('to-email-sas@example.com');
+   ```
+5. *Authentication → URL Configuration*
+   - Site URL: `https://gortynia-demo.vercel.app`
+   - Redirect URLs: `http://localhost:3000/**`, `https://gortynia-demo.vercel.app/**` (και `http://<IP>:3000/**` για δοκιμές από κινητό)
+6. *Authentication → Emails → Magic Link*: προσθέστε στο κείμενο `Κωδικός: {{ .Token }}` — έτσι στο κινητό
+   μπορεί κανείς να γράψει τον 6ψήφιο κωδικό αντί να πατήσει τον σύνδεσμο (χρήσιμο όταν το email ανοίγει σε άλλο browser).
 
-### `npm run build`
+### 2. Μεταβλητές περιβάλλοντος
+Αντιγράψτε το [.env.example](.env.example) ως `.env.local` (τοπικά) και βάλτε **τις ίδιες** στο *Vercel → Settings → Environment Variables*:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+| Μεταβλητή | Από πού | Δημόσια; |
+|---|---|---|
+| `REACT_APP_SUPABASE_URL` | Supabase → Project Settings → API | ναι |
+| `REACT_APP_SUPABASE_ANON_KEY` | ίδιο σημείο, *anon / publishable* key | ναι |
+| `REACT_APP_VAPID_PUBLIC_KEY` | `npx web-push generate-vapid-keys` | ναι |
+| `VAPID_PRIVATE_KEY` | ίδια εντολή | **ΟΧΙ** |
+| `VAPID_SUBJECT` | `https://gortynia-demo.vercel.app` | — |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → API → *service_role / secret* | **ΟΧΙ** |
+| `CRON_SECRET` | οποιοδήποτε μακρύ τυχαίο κείμενο | **ΟΧΙ** |
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Μετά: *Vercel → Deployments → Redeploy*. Τοπικά: ξανατρέξτε `npm start`.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Πώς δουλεύει
 
-### `npm run eject`
+### Ρόλοι
+| | Επισκέπτης | Συνδεδεμένος χρήστης | Διαχειριστής |
+|---|---|---|---|
+| Βλέπει εγκεκριμένες εκδηλώσεις | ✅ | ✅ | ✅ |
+| Προτείνει εκδήλωση (+ σχόλιο προς διαχειριστή) | — | ✅ → *σε αναμονή* | ✅ → δημοσιεύεται αμέσως |
+| Βλέπει τις δικές του σε αναμονή / απορριφθείσες | — | ✅ | ✅ |
+| Αλλάζει / διαγράφει | — | μόνο δικές του (ξαναπάνε σε αναμονή) | όλες |
+| Εγκρίνει / απορρίπτει, βλέπει email & σχόλιο | — | — | ✅ |
+| Βλέπει λίστα χρηστών (email, τελευταία σύνδεση) | — | — | ✅ |
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Οι κανόνες επιβάλλονται **από τη βάση** (Row Level Security + trigger στο `schema.sql`), όχι μόνο από το UI.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Κοινοποίηση
+Κάθε εκδήλωση έχει σύνδεσμο `https://gortynia-demo.vercel.app/e/<id>`. Το Facebook/Viber/WhatsApp δείχνουν
+προεπισκόπηση με τίτλο, ημερομηνία και μουσικούς ([api/share.js](api/share.js))· ο επισκέπτης ανοίγει την εφαρμογή με την εκδήλωση.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Ειδοποιήσεις (Web Push)
+- Ο χρήστης διαλέγει *όλα τα χωριά* ή *συγκεκριμένα* (🔔).
+- Όταν ο διαχειριστής **εγκρίνει** εκδήλωση → ειδοποίηση σε όσους ακολουθούν το χωριό ([api/notify.js](api/notify.js)).
+- Όταν χρήστης **υποβάλει** εκδήλωση → ειδοποίηση στους διαχειριστές («Για έγκριση»).
+- Κάθε πρωί 10:00 → **υπενθύμιση** για τις αυριανές εκδηλώσεις ([api/reminders.js](api/reminders.js), Vercel Cron).
+- iPhone: χρειάζεται iOS 16.4+ και η εφαρμογή να είναι εγκατεστημένη στην οθόνη Αφετηρίας.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Θέμα
+Αυτόματα σκοτεινό από τη δύση ως την ανατολή του ηλίου (υπολογίζεται για την Αρκαδία). Αλλάζει από το μενού.
 
-## Learn More
+## Αλλαγή δεδομένων
+Τα CSV στο `public/` είναι η «πηγή» των αρχικών δεδομένων. Αν τα αλλάξετε:
+```
+python scripts/build_seed.py      # ξαναφτιάχνει το supabase/seed.sql
+```
+και τρέξτε το `seed.sql` στο Supabase. Αντικαθιστά μόνο τις αρχικές/demo εκδηλώσεις — όχι όσες πρόσθεσαν χρήστες.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Όρια δωρεάν πλάνων
+- **Supabase**: 500 MB βάση, 50.000 χρήστες/μήνα. Τα email σύνδεσης του ενσωματωμένου server είναι λίγα ανά ώρα —
+  για πραγματική χρήση συνδέστε δωρεάν SMTP (Resend, Brevo) στο *Authentication → Emails → SMTP Settings*.
+  Project χωρίς κίνηση για 7 ημέρες **παγώνει** (ξυπνάει από το dashboard).
+- **Vercel Hobby**: 1 cron την ημέρα, υπεραρκετά serverless calls.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Αρχεία
+- `src/App.js` — κύρια οθόνη · `src/components/` — χάρτης, κάρτες, λεπτομέρειες, φόρμα, διαχείριση, ειδοποιήσεις
+- `src/lib/` — δεδομένα, σύνδεση, θέμα, PWA/ειδοποιήσεις, ημερολόγιο
+- `api/` — serverless functions (κοινοποίηση, ειδοποιήσεις, υπενθυμίσεις) · `vercel.json` — διαδρομές & cron
+- `public/sw.js` — service worker · `public/manifest.json` — εγκατάσταση σαν εφαρμογή
+- `supabase/` — σχήμα βάσης & αρχικά δεδομένα · `scripts/build_seed.py` · `generate_qr.py` — QR code
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Φωτογραφίες
+Wikimedia Commons, με άδεια CC BY-SA: Δημητσάνα (Ulrich Still), Καρύταινα (FilipposTrains), Λαγκάδια (Glorious 93),
+Βυτίνα (C messier), Φαράγγι Λούσιου (Napoleon Vier). Χάρτης © OpenStreetMap contributors.
