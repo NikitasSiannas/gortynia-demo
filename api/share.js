@@ -6,8 +6,8 @@ const { SITE, TYPE_LABEL, publicClient, formatDateEl, escapeHtml } = require("./
 module.exports = async (req, res) => {
     const id = String(req.query.id || "").replace(/\D/g, "");
     const appUrl = id ? `/?e=${id}` : "/";
-    let title = "Πανηγύρια Γορτυνίας";
-    let description = "Πανηγύρια, λαϊκές βραδιές & πάρτυ στα χωριά της Γορτυνίας και της Αρκαδίας.";
+    let title = "Πάμε Πανηγύρι";
+    let description = "Πανηγύρια, λαϊκές βραδιές & πάρτυ στα χωριά της Πελοποννήσου.";
 
     try {
         const db = publicClient();
@@ -42,7 +42,7 @@ module.exports = async (req, res) => {
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeHtml(description)}">
 <meta property="og:type" content="article">
-<meta property="og:site_name" content="Πανηγύρια Γορτυνίας">
+<meta property="og:site_name" content="Πάμε Πανηγύρι">
 <meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(description)}">
 <meta property="og:image" content="${SITE}/og-image.jpg">

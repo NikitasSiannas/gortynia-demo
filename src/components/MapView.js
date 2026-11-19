@@ -72,7 +72,7 @@ function popupHtml(village, events) {
               </button>`;
           }).join("")
         : `<div class="popup-empty">Δεν υπάρχουν εκδηλώσεις</div>`;
-    return `<div class="popup"><div class="popup-title">${esc(village.name)}</div>${village.region ? `<div class="popup-region">${esc(village.region)}</div>` : ""}${rows}</div>`;
+    return `<div class="popup"><div class="popup-title">${esc(village.name)}</div>${village.region || village.prefecture ? `<div class="popup-region">${esc([village.region, village.prefecture].filter(Boolean).join(" · "))}</div>` : ""}${rows}</div>`;
 }
 
 function ClusterLayer({ villages, eventsByVillage, showEmptyVillages, selectedVillageId, onSelectVillage, onOpenEvent, visible }) {
@@ -168,8 +168,20 @@ function SizeAndFit({ villages, visible, hasTarget }) {
     return null;
 }
 
+// Όταν αλλάζει το φίλτρο νομού/δήμου, ζουμάρουμε στην περιοχή
+function FitOnFilter({ villages, fitKey, visible }) {
+    const map = useMap();
+    const last = useRef(fitKey);
+    useEffect(() => {
+        if (!visible || last.current === fitKey || villages.length === 0) return;
+        last.current = fitKey;
+        map.flyToBounds(villages.map((v) => [v.lat, v.lon]), { padding: [30, 30], duration: 0.9 });
+    }, [fitKey, villages, visible, map]);
+    return null;
+}
+
 export default function MapView(props) {
-    const { villages, visible, selectedVillageId } = props;
+    const { villages, visible, selectedVillageId, fitKey } = props;
     const hasTarget = useMemo(() => villages.some((v) => v.id === selectedVillageId), [villages, selectedVillageId]);
 
     return (
@@ -180,6 +192,7 @@ export default function MapView(props) {
                 maxZoom={19}
             />
             <SizeAndFit villages={villages} visible={visible} hasTarget={hasTarget} />
+            <FitOnFilter villages={villages} fitKey={fitKey} visible={visible} />
             <ClusterLayer {...props} />
         </MapContainer>
     );

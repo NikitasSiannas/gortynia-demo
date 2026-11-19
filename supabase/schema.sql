@@ -12,7 +12,12 @@ create table if not exists public.villages (
     lat     double precision not null,
     lon     double precision not null
 );
-alter table public.villages add column if not exists region text not null default 'Γορτυνία';
+alter table public.villages add column if not exists region text not null default 'Γορτυνία';   -- δήμος / περιοχή
+alter table public.villages add column if not exists prefecture text not null default 'Αρκαδία'; -- νομός
+alter table public.villages add column if not exists osm_id bigint;                              -- κόμβος OpenStreetMap
+-- Στην Πελοπόννησο υπάρχουν πολλά χωριά με το ίδιο όνομα (π.χ. «Άγιος Νικόλαος») — το όνομα δεν είναι μοναδικό
+alter table public.villages drop constraint if exists villages_name_key;
+create index if not exists villages_prefecture_idx on public.villages (prefecture);
 
 -- ---------- Εκδηλώσεις ----------
 create table if not exists public.celebrations (
@@ -103,8 +108,10 @@ create trigger celebrations_before_write
     for each row execute function public.celebrations_before_write();
 
 -- ---------- Λίστα χρηστών για τον διαχειριστή ----------
+-- (drop: άλλαξε ο τύπος επιστροφής σε σχέση με την πρώτη έκδοση)
+drop function if exists public.admin_list_users();
 create or replace function public.admin_list_users()
-returns table (email text, created_at timestamptz, last_sign_in_at timestamptz, events_count bigint)
+returns table (id uuid, email text, is_anonymous boolean, created_at timestamptz, last_sign_in_at timestamptz, events_count bigint)
 language plpgsql stable security definer set search_path = public, auth
 as $$
 begin
@@ -112,7 +119,7 @@ begin
         raise exception 'Μόνο για διαχειριστές';
     end if;
     return query
-        select u.email::text, u.created_at, u.last_sign_in_at,
+        select u.id, u.email::text, coalesce(u.is_anonymous, false), u.created_at, u.last_sign_in_at,
                (select count(*) from public.celebrations c where c.created_by = u.id)
         from auth.users u
         order by u.last_sign_in_at desc nulls last;
@@ -170,7 +177,15 @@ create policy "villages: διαχειριστές αλλάζουν" on public.vi
 
 drop policy if exists "admins: ο ίδιος βλέπει τον εαυτό του" on public.admins;
 create policy "admins: ο ίδιος βλέπει τον εαυτό του" on public.admins for select
-    to authenticated using (lower(email) = lower(auth.jwt() ->> 'email'));
+    to authenticated using (lower(email) = lower(auth.jwt() ->> 'email') or public.is_admin());
+
+-- Οι διαχειριστές προσθέτουν/αφαιρούν άλλους διαχειριστές από την εφαρμογή
+drop policy if exists "admins: διαχειριστές προσθέτουν" on public.admins;
+create policy "admins: διαχειριστές προσθέτουν" on public.admins for insert
+    to authenticated with check (public.is_admin());
+drop policy if exists "admins: διαχειριστές αφαιρούν" on public.admins;
+create policy "admins: διαχειριστές αφαιρούν" on public.admins for delete
+    to authenticated using (public.is_admin() and (select count(*) from public.admins) > 1);
 
 -- Παλιές πολιτικές (από την πρώτη έκδοση)
 drop policy if exists "celebrations: όλοι διαβάζουν" on public.celebrations;
@@ -196,6 +211,63 @@ create policy "celebrations: αλλαγή" on public.celebrations for update
 drop policy if exists "celebrations: διαγραφή" on public.celebrations;
 create policy "celebrations: διαγραφή" on public.celebrations for delete
     to authenticated using (created_by = auth.uid() or public.is_admin());
+
+-- ---------- Μουσικοί (οργανοπαίκτες & τραγουδιστές) ----------
+create table if not exists public.musicians (
+    id            bigint generated always as identity primary key,
+    name          text not null unique check (char_length(name) between 2 and 80),
+    roles         text[] not null default '{}',   -- singer, clarinet, violin, bouzouki, laouto, santouri, oud, dj
+    genres        text[] not null default '{}',   -- δημοτικό, νησιώτικο, λαϊκό, ρεμπέτικο
+    birth_year    integer,
+    death_year    integer,
+    wikipedia_url text,
+    description   text,
+    status        text not null default 'approved' check (status in ('pending', 'approved', 'rejected')),
+    created_by    uuid references auth.users(id) on delete set null default auth.uid(),
+    created_at    timestamptz not null default now()
+);
+create index if not exists musicians_roles_idx on public.musicians using gin (roles);
+-- Πού αναφέρεται ο μουσικός (δεν χρειάζεται Wikipedia: αρκεί ένα πρόγραμμα πανηγυριού, άρθρο, βίντεο)
+alter table public.musicians add column if not exists scene text not null default 'panigyri'
+    check (scene in ('panigyri', 'known'));           -- panigyri = μουσικός πανηγυριών, known = γνωστός καλλιτέχνης
+alter table public.musicians add column if not exists source_url text;
+alter table public.musicians add column if not exists source_note text;
+alter table public.musicians add column if not exists last_seen_year integer;
+
+-- Νέοι μουσικοί από χρήστες (π.χ. γράφοντας ένα όνομα στη φόρμα εκδήλωσης) πάνε σε αναμονή έγκρισης
+create or replace function public.musicians_before_write()
+returns trigger
+language plpgsql set search_path = public
+as $$
+begin
+    if current_user not in ('authenticated', 'anon') then
+        return new;
+    end if;
+    if not public.is_admin() then
+        new.status := 'pending';
+        new.created_by := auth.uid();
+    end if;
+    return new;
+end;
+$$;
+drop trigger if exists musicians_before_write on public.musicians;
+create trigger musicians_before_write
+    before insert or update on public.musicians
+    for each row execute function public.musicians_before_write();
+
+alter table public.musicians enable row level security;
+drop policy if exists "musicians: ανάγνωση" on public.musicians;
+create policy "musicians: ανάγνωση" on public.musicians for select
+    using (status = 'approved' or created_by = auth.uid() or public.is_admin());
+drop policy if exists "musicians: πρόταση" on public.musicians;
+create policy "musicians: πρόταση" on public.musicians for insert
+    to authenticated with check (true);
+drop policy if exists "musicians: διαχειριστές αλλάζουν" on public.musicians;
+create policy "musicians: διαχειριστές αλλάζουν" on public.musicians for update
+    to authenticated using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "musicians: διαχειριστές διαγράφουν" on public.musicians;
+create policy "musicians: διαχειριστές διαγράφουν" on public.musicians for delete
+    to authenticated using (public.is_admin());
 
 -- ---------------------------------------------------------------------
 -- ΟΡΙΣΜΟΣ ΔΙΑΧΕΙΡΙΣΤΗ — τρέξτε ξεχωριστά, με το δικό σας email:

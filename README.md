@@ -1,6 +1,7 @@
-# Πανηγύρια Γορτυνίας
+# Πάμε Πανηγύρι
 
-Χάρτης με τα πανηγύρια, τις λαϊκές βραδιές και τα πάρτυ νεολαίας στα χωριά της Γορτυνίας και της υπόλοιπης Αρκαδίας.
+Χάρτης με τα πανηγύρια, τις λαϊκές βραδιές και τα πάρτυ νεολαίας σε όλη την Πελοπόννησο
+(Αρκαδία, Αργολίδα, Κορινθία, Λακωνία, Μεσσηνία, Ηλεία, Αχαΐα).
 Εγκαθίσταται στο κινητό σαν εφαρμογή (PWA), στέλνει ειδοποιήσεις, και οι χρήστες προτείνουν εκδηλώσεις που εγκρίνει ο διαχειριστής.
 
 Ζωντανά: https://gortynia-demo.vercel.app
@@ -17,48 +18,64 @@ npm start        # http://localhost:3000  (από κινητό στο ίδιο W
 Χωρίς ρυθμισμένο Supabase η εφαρμογή δουλεύει **μόνο για ανάγνωση**, με τα `public/villages.csv` και `public/celebrations.csv`.
 Η εγκατάσταση ως εφαρμογή και οι ειδοποιήσεις δουλεύουν μόνο στη δημοσιευμένη έκδοση (https).
 
-## Ρύθμιση — μία φορά
+## Ρύθμιση βάσης δεδομένων — μία φορά (≈5 λεπτά)
 
-### 1. Supabase
-1. [supabase.com](https://supabase.com) → *New project* (Free, *Central EU (Frankfurt)*).
-2. *SQL Editor* → *New query* → επικόλληση του [supabase/schema.sql](supabase/schema.sql) → *Run*.
-3. Νέο query με το [supabase/seed.sql](supabase/seed.sql) → *Run* (100 χωριά, 104 εκδηλώσεις).
-4. **Ορισμός διαχειριστή** — νέο query με το δικό σας email:
-   ```sql
-   insert into public.admins (email) values ('to-email-sas@example.com');
-   ```
-5. *Authentication → URL Configuration*
-   - Site URL: `https://gortynia-demo.vercel.app`
-   - Redirect URLs: `http://localhost:3000/**`, `https://gortynia-demo.vercel.app/**` (και `http://<IP>:3000/**` για δοκιμές από κινητό)
-6. *Authentication → Emails → Magic Link*: προσθέστε στο κείμενο `Κωδικός: {{ .Token }}` — έτσι στο κινητό
-   μπορεί κανείς να γράψει τον 6ψήφιο κωδικό αντί να πατήσει τον σύνδεσμο (χρήσιμο όταν το email ανοίγει σε άλλο browser).
+Όλη η ρύθμιση γίνεται **αυτόματα** από το `scripts/setup_supabase.mjs`. Χρειάζεστε μόνο δύο πράγματα:
 
-### 2. Μεταβλητές περιβάλλοντος
-Αντιγράψτε το [.env.example](.env.example) ως `.env.local` (τοπικά) και βάλτε **τις ίδιες** στο *Vercel → Settings → Environment Variables*:
+1. **Νέο project** στο [supabase.com](https://supabase.com) → *New project* (Free, περιοχή *Central EU (Frankfurt)*).
+   Από τη διεύθυνσή του (`https://ΑΥΤΟ.supabase.co`) κρατήστε το **project ref**.
+2. **Access token**: supabase.com → εικονίδιο λογαριασμού → *Account preferences* → *Access Tokens* → *Generate new token*.
 
+Βάλτε τα στο `.env.local` (δεν ανεβαίνει ποτέ στο GitHub):
+```
+SUPABASE_PROJECT_REF=abcdefghijklmnop
+SUPABASE_ACCESS_TOKEN=sbp_...
+```
+και τρέξτε:
+```
+npm run setup:db      # βάση μόνο
+npm run setup:all     # + μεταβλητές στο Vercel (χρειάζεται και VERCEL_TOKEN στο .env.local)
+```
+Το script:
+- φτιάχνει πίνακες & κανόνες ασφαλείας (`supabase/schema.sql`) και περνά όλα τα δεδομένα (`supabase/seed.sql`),
+- ορίζει διαχειριστή από το τοπικό `supabase/admins.local.sql`,
+- ενεργοποιεί **είσοδο επισκεπτών**, διευθύνσεις σύνδεσης (υπολογιστής, κινητό στο Wi-Fi, Vercel) και ελληνικά email με 6ψήφιο κωδικό,
+- γράφει τα κλειδιά (URL, anon, service role) στο `.env.local` — χωρίς να τα εμφανίσει.
+
+Μετά: `npm start` τοπικά, και `git push` για το site (το Vercel ξαναχτίζει μόνο του).
+
+Χωρίς βάση, η εφαρμογή δουλεύει μόνο για ανάγνωση με τα CSV (κουμπί «Συνέχεια ως επισκέπτης (demo)»).
+
+### Σύνδεση με Google (προαιρετικό)
+1. [console.cloud.google.com](https://console.cloud.google.com) → *APIs & Services → OAuth consent screen* (External, «Πάμε Πανηγύρι») → *Publish app*.
+2. *Credentials → OAuth client ID → Web application*, redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`.
+3. Client ID/secret στο Supabase → *Authentication → Sign In / Providers → Google*.
+4. `REACT_APP_GOOGLE_LOGIN=1` στο `.env.local` και στο Vercel.
+
+### Μεταβλητές περιβάλλοντος
 | Μεταβλητή | Από πού | Δημόσια; |
 |---|---|---|
-| `REACT_APP_SUPABASE_URL` | Supabase → Project Settings → API | ναι |
-| `REACT_APP_SUPABASE_ANON_KEY` | ίδιο σημείο, *anon / publishable* key | ναι |
-| `REACT_APP_VAPID_PUBLIC_KEY` | `npx web-push generate-vapid-keys` | ναι |
-| `VAPID_PRIVATE_KEY` | ίδια εντολή | **ΟΧΙ** |
+| `REACT_APP_SUPABASE_URL`, `REACT_APP_SUPABASE_ANON_KEY` | το script (ή Supabase → API) | ναι |
+| `REACT_APP_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys` | ναι / **ΟΧΙ** |
 | `VAPID_SUBJECT` | `https://gortynia-demo.vercel.app` | — |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → API → *service_role / secret* | **ΟΧΙ** |
-| `CRON_SECRET` | οποιοδήποτε μακρύ τυχαίο κείμενο | **ΟΧΙ** |
-
-Μετά: *Vercel → Deployments → Redeploy*. Τοπικά: ξανατρέξτε `npm start`.
+| `SUPABASE_SERVICE_ROLE_KEY` | το script (ή Supabase → API → service_role) | **ΟΧΙ** |
+| `CRON_SECRET` | τυχαίο κείμενο | **ΟΧΙ** |
+| `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `VERCEL_TOKEN` | μόνο τοπικά, για το script | **ΟΧΙ** |
 
 ## Πώς δουλεύει
 
 ### Ρόλοι
-| | Επισκέπτης | Συνδεδεμένος χρήστης | Διαχειριστής |
+Είσοδος: **με email** (σύνδεσμος ή 6ψήφιος κωδικός) ή **ως επισκέπτης** (χωρίς στοιχεία). Ο επισκέπτης μπορεί
+αργότερα να προσθέσει email από το μενού — ο λογαριασμός του κρατά ό,τι έχει καταχωρήσει.
+
+| | Επισκέπτης | Με email | Διαχειριστής |
 |---|---|---|---|
-| Βλέπει εγκεκριμένες εκδηλώσεις | ✅ | ✅ | ✅ |
-| Προτείνει εκδήλωση (+ σχόλιο προς διαχειριστή) | — | ✅ → *σε αναμονή* | ✅ → δημοσιεύεται αμέσως |
-| Βλέπει τις δικές του σε αναμονή / απορριφθείσες | — | ✅ | ✅ |
-| Αλλάζει / διαγράφει | — | μόνο δικές του (ξαναπάνε σε αναμονή) | όλες |
-| Εγκρίνει / απορρίπτει, βλέπει email & σχόλιο | — | — | ✅ |
-| Βλέπει λίστα χρηστών (email, τελευταία σύνδεση) | — | — | ✅ |
+| Βλέπει εγκεκριμένες εκδηλώσεις, ειδοποιήσεις 🔔 | ✅ | ✅ | ✅ |
+| Προτείνει εκδήλωση (+ σχόλιο προς διαχειριστή) | ✅ → *σε αναμονή* | ✅ → *σε αναμονή* | ✅ → δημοσιεύεται αμέσως |
+| Βλέπει τις δικές του σε αναμονή / απορριφθείσες | ✅ | ✅ | ✅ |
+| Αλλάζει / διαγράφει | δικές του | δικές του (ξαναπάνε σε αναμονή) | όλες |
+| Εγκρίνει / απορρίπτει, βλέπει ποιος την πρότεινε | — | — | ✅ |
+| Βλέπει λίστα χρηστών (email ή «επισκέπτης», τελευταία σύνδεση) | — | — | ✅ |
 
 Οι κανόνες επιβάλλονται **από τη βάση** (Row Level Security + trigger στο `schema.sql`), όχι μόνο από το UI.
 
@@ -76,8 +93,26 @@ npm start        # http://localhost:3000  (από κινητό στο ίδιο W
 ### Θέμα
 Αυτόματα σκοτεινό από τη δύση ως την ανατολή του ηλίου (υπολογίζεται για την Αρκαδία). Αλλάζει από το μενού.
 
+### Είσοδος
+Με ρυθμισμένη βάση, η εφαρμογή ζητά σύνδεση (Google ή email) πριν δείξει τον χάρτη. Όποιος ανοίγει κοινοποιημένο
+σύνδεσμο βλέπει ποια εκδήλωση του έστειλαν, συνδέεται, και μεταφέρεται κατευθείαν σε αυτήν.
+Χωρίς βάση (π.χ. τοπικά χωρίς `.env.local`) εμφανίζεται κουμπί «Είσοδος (demo)».
+
+### Μουσικοί
+Η φόρμα εκδήλωσης προτείνει ονόματα ανά όργανο από τον κατάλογο μουσικών. Νέο όνομα που δεν υπάρχει
+προστίθεται αυτόματα ως πρόταση και εγκρίνεται από *Διαχείριση → Μουσικοί*.
+Ο αρχικός κατάλογος (`data/musicians.csv`) περιέχει **μόνο εν ζωή** καλλιτέχνες:
+- **Μουσικοί πανηγυριών** (`scene = panigyri`): από προγράμματα πανηγυριών της Αρκαδίας (Kalimera Arkadia,
+  e-gortynia, Arcadia Portal, panigiria.gr, Leonidio24), την εκπομπή «Το Αλάτι της Γης» κ.ά. — με πηγή και
+  χρονιά τελευταίας αναφοράς για τον καθένα. Εμφανίζονται πρώτοι στις προτάσεις.
+- **Γνωστοί καλλιτέχνες** (`scene = known`): δημοτικό/λαϊκό/ρεμπέτικο από τη Wikipedia.
+
 ## Αλλαγή δεδομένων
-Τα CSV στο `public/` είναι η «πηγή» των αρχικών δεδομένων. Αν τα αλλάξετε:
+Μόλις ρυθμιστεί η βάση, **η εφαρμογή διαβάζει αυτόματα από τη βάση** — τα CSV μένουν μόνο ως εφεδρεία
+(αν η βάση δεν απαντά) και ως πηγή για το αρχικό γέμισμα. Οι καθημερινές αλλαγές γίνονται από την εφαρμογή
+ή από το *Supabase → Table Editor*, όχι από τα CSV.
+
+Τα CSV (`public/villages.csv`, `public/celebrations.csv`, `data/musicians.csv`) χρησιμεύουν για μαζικές αλλαγές:
 ```
 python scripts/build_seed.py      # ξαναφτιάχνει το supabase/seed.sql
 ```

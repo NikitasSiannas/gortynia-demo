@@ -15,8 +15,9 @@ function Item({ onClick, icon, children, badge }) {
 
 export default function Menu({
     user, isAdmin, pendingCount, dbEnabled, theme, onTheme, canInstall, onInstall,
-    onNotifications, onAdmin, onSignIn, onSignOut,
+    onNotifications, onAdmin, onSignIn, onSignOut, onQr, onHome, onGallery, onLinkEmail,
 }) {
+    const guest = Boolean(user?.is_anonymous);
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
 
@@ -40,7 +41,7 @@ export default function Menu({
                 aria-label="Μενού"
                 aria-expanded={open}
             >
-                {user ? user.email?.[0] : "☰"}
+                {user ? (guest ? "👋" : user.email?.[0]) : "☰"}
                 {isAdmin && pendingCount > 0 && (
                     <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-stone-900 ring-2 ring-stone-900/30">
                         {pendingCount}
@@ -53,13 +54,16 @@ export default function Menu({
                     {user && (
                         <div className="px-3 pt-2 pb-3 border-b border-stone-100 dark:border-stone-800 mb-1">
                             <p className="text-xs text-stone-500">Συνδεδεμένος ως{isAdmin ? " · διαχειριστής" : ""}</p>
-                            <p className="font-medium truncate">{user.email}</p>
+                            <p className="font-medium truncate">{guest ? "👋 Επισκέπτης" : user.email}</p>
                         </div>
                     )}
 
+                    <Item onClick={run(onHome)} icon="🏠">Αρχική</Item>
+                    <Item onClick={run(onGallery)} icon="🖼️">Φωτογραφίες χωριών</Item>
                     {isAdmin && <Item onClick={run(onAdmin)} icon="🛡️" badge={pendingCount}>Διαχείριση</Item>}
                     <Item onClick={run(onNotifications)} icon="🔔">Ειδοποιήσεις</Item>
                     {canInstall && <Item onClick={run(onInstall)} icon="📲">Εγκατάσταση εφαρμογής</Item>}
+                    <Item onClick={run(onQr)} icon="▦">QR · Μοιραστείτε την εφαρμογή</Item>
 
                     <div className="px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-stone-400">Εμφάνιση</div>
                     <div className="mx-2 mb-2 grid grid-cols-3 gap-1 rounded-xl bg-stone-100 dark:bg-stone-800 p-1">
@@ -77,8 +81,9 @@ export default function Menu({
 
                     {dbEnabled && (
                         <div className="border-t border-stone-100 dark:border-stone-800 mt-1 pt-1">
+                            {guest && <Item onClick={run(onLinkEmail)} icon="✉️">Προσθήκη email στον λογαριασμό</Item>}
                             {user
-                                ? <Item onClick={run(onSignOut)} icon="↩︎">Αποσύνδεση</Item>
+                                ? <Item onClick={run(onSignOut)} icon="↩︎">{guest ? "Έξοδος επισκέπτη" : "Αποσύνδεση"}</Item>
                                 : <Item onClick={run(onSignIn)} icon="✉️">Σύνδεση με email</Item>}
                         </div>
                     )}

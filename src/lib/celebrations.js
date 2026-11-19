@@ -14,7 +14,10 @@ export const DEFAULT_STYLE = { icon: null, color: "#6b7280", soft: "#f3f4f6", la
 export const styleFor = (type) => CELEBRATION_STYLE[type] || DEFAULT_STYLE;
 export const typeLabel = (type) => styleFor(type).label || type;
 
-export const REGIONS = ["Γορτυνία", "Τρίπολη", "Μεγαλόπολη", "Βόρεια Κυνουρία", "Νότια Κυνουρία", "Ηλεία"];
+export const PREFECTURES = ["Αρκαδία", "Αργολίδα", "Κορινθία", "Λακωνία", "Μεσσηνία", "Ηλεία", "Αχαΐα"];
+
+/** «Βυτίνα, Δήμος Τρίπολης, Αρκαδία» */
+export const placeLabel = (v) => [v?.name, v?.region, v?.prefecture].filter(Boolean).join(", ");
 
 export const STATUS_LABEL = {
     pending: "Σε αναμονή έγκρισης",
@@ -78,15 +81,26 @@ export const formatTime = (t) => (t ? t.slice(0, 5) : "");
 
 // ---------- Κοινοποίηση ----------
 
-/** Σύνδεσμος για κοινοποίηση. Οι εκδηλώσεις της βάσης έχουν σελίδα με προεπισκόπηση (/e/:id). */
+/**
+ * Σύνδεσμος για κοινοποίηση — πάντα προς το δημοσιευμένο site, ώστε να ανοίγει σε οποιονδήποτε
+ * (ακόμα κι αν κοινοποιείτε από τη δοκιμαστική έκδοση στον υπολογιστή σας).
+ * Οι εκδηλώσεις της βάσης έχουν σελίδα με προεπισκόπηση για Viber/Facebook (/e/:id).
+ */
 export function shareUrl(celebration) {
-    const origin = window.location.origin.includes("localhost") || /^\d/.test(window.location.hostname)
-        ? window.location.origin
-        : SITE_URL;
     return /^\d+$/.test(String(celebration.id))
-        ? `${origin}/e/${celebration.id}`
-        : `${origin}/?e=${encodeURIComponent(celebration.id)}`;
+        ? `${SITE_URL}/e/${celebration.id}`
+        : `${SITE_URL}/?e=${encodeURIComponent(celebration.id)}`;
 }
+
+export const ROLE_LABEL = {
+    singer: "Τραγούδι", clarinet: "Κλαρίνο", violin: "Βιολί", bouzouki: "Μπουζούκι",
+    laouto: "Λαούτο", santouri: "Σαντούρι", oud: "Ούτι", dj: "DJ",
+    percussion: "Κρουστά", keys: "Πλήκτρα", guitar: "Κιθάρα", flute: "Φλογέρα/Πίπιζα", band: "Συγκρότημα",
+};
+// Ποιο πεδίο της εκδήλωσης αντιστοιχεί σε ποιον ρόλο μουσικού
+export const FIELD_ROLE = {
+    dj: "dj", front_singer: "singer", clarinet_player: "clarinet", violin_player: "violin", bouzouki_player: "bouzouki",
+};
 
 export function shareText(celebration, village) {
     return `${typeLabel(celebration.celebration_type)} · ${village?.name || ""} — ${formatDate(celebration.celebration_date, { year: undefined })}${celebration.start_time ? `, ${formatTime(celebration.start_time)}` : ""}`;
@@ -125,7 +139,7 @@ export function googleCalendarUrl(c, village) {
         text: `${typeLabel(c.celebration_type)} · ${village?.name || ""}`,
         dates: `${t.start}/${t.end}`,
         details: calendarDescription(c),
-        location: `${village?.name || ""}, Αρκαδία`,
+        location: placeLabel(village),
         ctz: "Europe/Athens",
     });
     return `https://calendar.google.com/calendar/render?${params}`;
@@ -136,14 +150,14 @@ export function downloadIcs(c, village) {
     const t = eventTimes(c);
     const esc = (s) => String(s).replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/([,;])/g, "\\$1");
     const lines = [
-        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Panigyria Gortynias//EL", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Pame Panigyri//EL", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
         "BEGIN:VEVENT",
-        `UID:${c.id}@panigyria-gortynias`,
+        `UID:${c.id}@pame-panigyri`,
         `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`,
         t.allDay ? `DTSTART;VALUE=DATE:${t.start}` : `DTSTART;TZID=Europe/Athens:${t.start}`,
         t.allDay ? `DTEND;VALUE=DATE:${t.end}` : `DTEND;TZID=Europe/Athens:${t.end}`,
         `SUMMARY:${esc(`${typeLabel(c.celebration_type)} · ${village?.name || ""}`)}`,
-        `LOCATION:${esc(`${village?.name || ""}, Αρκαδία`)}`,
+        `LOCATION:${esc(placeLabel(village))}`,
         village ? `GEO:${village.lat};${village.lon}` : null,
         `DESCRIPTION:${esc(calendarDescription(c))}`,
         "BEGIN:VALARM", "TRIGGER:-PT3H", "ACTION:DISPLAY", "DESCRIPTION:Υπενθύμιση", "END:VALARM",

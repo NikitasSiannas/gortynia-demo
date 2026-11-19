@@ -46,6 +46,9 @@
     }
 }
 
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
 /* ---------- Φόντο με αργό ζουμ (Ken Burns) ---------- */
 .hero-bg {
     position: absolute;

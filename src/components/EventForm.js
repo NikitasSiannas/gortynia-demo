@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import Modal from "./Modal";
-import { CELEBRATION_TYPES, REGIONS, ROLES, styleFor, todayIso } from "../lib/celebrations";
+import { CELEBRATION_TYPES, FIELD_ROLE, ROLES, styleFor, todayIso } from "../lib/celebrations";
+import VillagePicker from "./VillagePicker";
 
 const EMPTY = {
     village_id: "",
@@ -16,8 +17,19 @@ const EMPTY = {
     submitter_comment: "",
 };
 
-export default function EventForm({ villages, initial, isAdmin, onSubmit, onDelete, onClose }) {
+export default function EventForm({ villages, musicians = [], initial, isAdmin, isGuest, onSubmit, onDelete, onClose }) {
     const editing = Boolean(initial?.id);
+
+    // Προτάσεις ονομάτων ανά ρόλο (μόνο εν ζωή μουσικοί)· ο χρήστης μπορεί πάντα να γράψει κάποιο νέο όνομα
+    const suggestions = useMemo(() => {
+        // Πρώτα οι μουσικοί των πανηγυριών, μετά οι γνωστοί καλλιτέχνες
+        const byRole = {};
+        [...musicians]
+            .filter((m) => !m.death_year && m.status !== "rejected")
+            .sort((a, b) => (a.scene === "known") - (b.scene === "known") || a.name.localeCompare(b.name, "el"))
+            .forEach((m) => (m.roles || []).forEach((r) => (byRole[r] ||= []).push(m.name)));
+        return byRole;
+    }, [musicians]);
     const [values, setValues] = useState(() => {
         const base = { ...EMPTY };
         Object.keys(EMPTY).forEach((k) => {
@@ -29,19 +41,15 @@ export default function EventForm({ villages, initial, isAdmin, onSubmit, onDele
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
 
-    // Χωριά ομαδοποιημένα ανά περιοχή
-    const groups = useMemo(() => {
-        const byRegion = {};
-        villages.forEach((v) => (byRegion[v.region || "Άλλα"] ||= []).push(v));
-        Object.values(byRegion).forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name, "el")));
-        const order = [...REGIONS, ...Object.keys(byRegion).filter((r) => !REGIONS.includes(r))];
-        return order.filter((r) => byRegion[r]).map((r) => [r, byRegion[r]]);
-    }, [villages]);
 
     const set = (k) => (e) => setValues((v) => ({ ...v, [k]: e.target.value }));
 
     const submit = async (e) => {
         e.preventDefault();
+        if (!values.village_id) {
+            setError("Επιλέξτε χωριό από τη λίστα.");
+            return;
+        }
         setBusy(true);
         setError("");
         try {
@@ -69,6 +77,7 @@ export default function EventForm({ villages, initial, isAdmin, onSubmit, onDele
                 {!isAdmin && (
                     <p className="rounded-2xl bg-sky-50 dark:bg-sky-500/10 p-3 text-sm text-sky-900 dark:text-sky-200">
                         ℹ️ {editing ? "Μετά την αλλαγή, η εκδήλωση" : "Η εκδήλωση"} θα εμφανιστεί δημόσια μόλις την εγκρίνει ο διαχειριστής.
+                        {isGuest && " Είστε επισκέπτης: γράψτε στο σχόλιο πώς μπορούμε να σας βρούμε, ή προσθέστε email από το μενού."}
                     </p>
                 )}
 
@@ -98,19 +107,10 @@ export default function EventForm({ villages, initial, isAdmin, onSubmit, onDele
                 </fieldset>
 
                 <div className="grid sm:grid-cols-3 gap-3">
-                    <label className="block sm:col-span-3">
+                    <div className="block sm:col-span-3">
                         <span className="label">Χωριό *</span>
-                        <select required value={values.village_id} onChange={set("village_id")} className="field">
-                            <option value="">— Επιλέξτε χωριό —</option>
-                            {groups.map(([region, list]) => (
-                                <optgroup key={region} label={region}>
-                                    {list.map((v) => (
-                                        <option key={v.id} value={v.id}>{v.name}</option>
-                                    ))}
-                                </optgroup>
-                            ))}
-                        </select>
-                    </label>
+                        <VillagePicker villages={villages} value={values.village_id} onChange={(id) => setValues((v) => ({ ...v, village_id: id }))} required />
+                    </div>
                     <label className="block sm:col-span-2">
                         <span className="label">Ημερομηνία *</span>
                         <input
@@ -131,22 +131,35 @@ export default function EventForm({ villages, initial, isAdmin, onSubmit, onDele
                 <fieldset>
                     <legend className="label">Ποιοι παίζουν (προαιρετικά)</legend>
                     <div className="grid sm:grid-cols-2 gap-3">
-                        {ROLES.map((r) => (
-                            <label key={r.key} className="relative block">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 flex w-5 justify-center">
-                                    {r.icon ? <img src={r.icon} alt="" className="w-5 h-5 object-contain" /> : r.emoji}
-                                </span>
-                                <input
-                                    placeholder={r.label}
-                                    aria-label={r.label}
-                                    maxLength={80}
-                                    value={values[r.key]}
-                                    onChange={set(r.key)}
-                                    className="field pl-10"
-                                />
-                            </label>
-                        ))}
+                        {ROLES.map((r) => {
+                            const list = suggestions[FIELD_ROLE[r.key]] || [];
+                            return (
+                                <label key={r.key} className="relative block">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 flex w-5 justify-center">
+                                        {r.icon ? <img src={r.icon} alt="" className="w-5 h-5 object-contain" /> : r.emoji}
+                                    </span>
+                                    <input
+                                        placeholder={list.length ? `${r.label} — γράψτε για προτάσεις` : r.label}
+                                        aria-label={r.label}
+                                        maxLength={80}
+                                        list={list.length ? `musicians-${r.key}` : undefined}
+                                        autoComplete="off"
+                                        value={values[r.key]}
+                                        onChange={set(r.key)}
+                                        className="field pl-10"
+                                    />
+                                    {list.length > 0 && (
+                                        <datalist id={`musicians-${r.key}`}>
+                                            {list.map((n) => <option key={n} value={n} />)}
+                                        </datalist>
+                                    )}
+                                </label>
+                            );
+                        })}
                     </div>
+                    <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
+                        Αν ο μουσικός δεν υπάρχει στη λίστα, γράψτε το όνομά του — θα προστεθεί μετά από έγκριση.
+                    </p>
                 </fieldset>
 
                 <label className="block">

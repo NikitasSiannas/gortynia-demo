@@ -77,7 +77,7 @@ export default function EventDetail({ celebration, village, canEdit, isAdmin, on
                 <div className="space-y-1 text-stone-700 dark:text-stone-200">
                     <p className="text-lg">📅 {formatDate(celebration.celebration_date)}</p>
                     {celebration.start_time && <p>🕘 Έναρξη {formatTime(celebration.start_time)}</p>}
-                    {village?.region && <p className="text-sm text-stone-500 dark:text-stone-400">📍 {village.region}, Αρκαδία</p>}
+                    {village && <p className="text-sm text-stone-500 dark:text-stone-400">📍 {[village.region, village.prefecture].filter(Boolean).join(", ")}</p>}
                     <StatusBadge status={celebration.status} />
                     {celebration.status === "rejected" && celebration.admin_note && (
                         <p className="text-sm text-red-700 dark:text-red-300">Σημείωση διαχειριστή: {celebration.admin_note}</p>
@@ -88,9 +88,9 @@ export default function EventDetail({ celebration, village, canEdit, isAdmin, on
 
                 <div className="text-sm text-stone-700 dark:text-stone-200"><Roles celebration={celebration} compact /></div>
 
-                {isAdmin && (celebration.created_by_email || celebration.submitter_comment) && (
+                {isAdmin && celebration.created_by && (
                     <div className="rounded-2xl border border-amber-300/60 bg-amber-50/60 dark:bg-amber-500/10 p-3 text-sm">
-                        {celebration.created_by_email && <p>👤 {celebration.created_by_email}</p>}
+                        <p>👤 {celebration.created_by_email || "👋 Επισκέπτης (χωρίς email)"}</p>
                         {celebration.submitter_comment && <p className="mt-1">💬 {celebration.submitter_comment}</p>}
                     </div>
                 )}

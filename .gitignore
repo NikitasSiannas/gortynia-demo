@@ -31,3 +31,9 @@ node_modules/
 # Build folder
 build/
 __pycache__/
+
+# Προσωπικά στοιχεία (email διαχειριστή κ.λπ.)
+*.local.sql
+# QR για τοπική δοκιμή (περιέχει την τοπική IP)
+qr_local.png
+.env

@@ -82,8 +82,8 @@ export default function EventCard({ celebration, village, index, active, onSelec
                     {celebration.start_time && (
                         <span className="text-stone-500 dark:text-stone-400">· {formatTime(celebration.start_time)}</span>
                     )}
-                    {village?.region && village.region !== "Γορτυνία" && (
-                        <span className="text-stone-400 dark:text-stone-500 text-xs">· {village.region}</span>
+                    {village?.prefecture && (
+                        <span className="text-stone-400 dark:text-stone-500 text-xs">· {village.prefecture}</span>
                     )}
                 </div>
                 <StatusBadge status={celebration.status} />

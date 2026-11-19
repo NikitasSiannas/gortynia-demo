@@ -76,10 +76,10 @@ self.addEventListener("push", (event) => {
     try {
         data = event.data ? event.data.json() : {};
     } catch {
-        data = { title: "Πανηγύρια Γορτυνίας", body: event.data && event.data.text() };
+        data = { title: "Πάμε Πανηγύρι", body: event.data && event.data.text() };
     }
     event.waitUntil(
-        self.registration.showNotification(data.title || "Πανηγύρια Γορτυνίας", {
+        self.registration.showNotification(data.title || "Πάμε Πανηγύρι", {
             body: data.body || "",
             icon: "/icon-192.png",
             badge: "/icon-192.png",

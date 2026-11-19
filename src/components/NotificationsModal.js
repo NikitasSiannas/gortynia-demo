@@ -27,10 +27,13 @@ export default function NotificationsModal({ villages, preselectVillageId, onClo
     }, [preselectVillageId]);
 
     const shown = useMemo(() => {
+        // Χιλιάδες χωριά: δείχνουμε τα επιλεγμένα + έως 60 αποτελέσματα αναζήτησης
         const q = query.trim().toLocaleLowerCase("el");
-        return [...villages]
-            .filter((v) => !q || v.name.toLocaleLowerCase("el").includes(q))
-            .sort((a, b) => (selected.has(b.id) - selected.has(a.id)) || a.name.localeCompare(b.name, "el"));
+        const chosen = villages.filter((v) => selected.has(v.id));
+        const found = q.length >= 2
+            ? villages.filter((v) => !selected.has(v.id) && v.name.toLocaleLowerCase("el").includes(q)).slice(0, 60)
+            : [];
+        return [...chosen, ...found];
     }, [villages, query, selected]);
 
     const toggle = (id) =>
@@ -106,7 +109,7 @@ export default function NotificationsModal({ villages, preselectVillageId, onClo
                         <div className="animate-fade-in-up">
                             <input
                                 type="search"
-                                placeholder="🔍  Αναζήτηση χωριού"
+                                placeholder="🔍  Γράψτε χωριό (2+ γράμματα)"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 className="field mb-2"
@@ -116,7 +119,7 @@ export default function NotificationsModal({ villages, preselectVillageId, onClo
                                     <label key={v.id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800">
                                         <input type="checkbox" checked={selected.has(v.id)} onChange={() => toggle(v.id)} className="h-4 w-4 accent-amber-600" />
                                         <span className="flex-1">{v.name}</span>
-                                        <span className="text-xs text-stone-400">{v.region}</span>
+                                        <span className="text-xs text-stone-400">{[v.region?.replace(/^Δήμος /, "Δ. "), v.prefecture].filter(Boolean).join(", ")}</span>
                                     </label>
                                 ))}
                             </div>
