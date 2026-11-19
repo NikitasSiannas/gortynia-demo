@@ -4,8 +4,6 @@ module.exports = {
     darkMode: "class",
     theme: {
         extend: {
-            // «short»: χαμηλή οθόνη, π.χ. κινητό γυρισμένο στο πλάι
-            screens: { short: { raw: "(max-height: 559px)" } },
             fontFamily: {
                 display: ['"GFS Didot"', "Georgia", "serif"],
                 sans: ["Manrope", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
@@ -51,5 +49,9 @@ module.exports = {
             },
         },
     },
-    plugins: [],
+    plugins: [
+        // «short:»: χαμηλή οθόνη, π.χ. κινητό γυρισμένο στο πλάι.
+        // (Ως plugin και όχι ως «screen», ώστε να δουλεύουν και τα min-[...] / max-[...])
+        ({ addVariant }) => addVariant("short", "@media (max-height: 559px)"),
+    ],
 };

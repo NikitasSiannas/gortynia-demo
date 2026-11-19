@@ -93,6 +93,8 @@ export default function App() {
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
     const [showFilters, setShowFilters] = useState(false);
+    // Κινητό, χάρτης: ανοιχτό το πλήρες πάνελ φίλτρων πάνω στον χάρτη;
+    const [mapFiltersOpen, setMapFiltersOpen] = useState(false);
     const [showEmptyVillages, setShowEmptyVillages] = useState(false);
 
     // UI
@@ -429,6 +431,32 @@ export default function App() {
         </p>
     );
 
+    // Κουμπιά τύπου εκδήλωσης (Πανηγύρι / Λαϊκή Βραδιά / Πάρτυ). scroll: σε μία γραμμή που σύρεται
+    const SHORT_TYPE = { "Πανηγύρι": "Πανηγύρι", "Λαική Βραδιά": "Λαϊκή", "Πάρτυ Νεολαίας": "Πάρτυ" };
+    const typeChips = (scroll = false) => (
+        <div className={`flex ${scroll ? "gap-1 overflow-x-auto scrollbar-none" : "gap-1.5 flex-wrap"}`}>
+            {CELEBRATION_TYPES.map((t) => {
+                const s = styleFor(t);
+                const on = types.has(t);
+                return (
+                    <button
+                        key={t}
+                        onClick={() => toggleType(t)}
+                        className={`flex shrink-0 items-center gap-1.5 rounded-full border ${scroll ? "pl-1 pr-2" : "px-2.5"} py-1 text-xs font-medium transition
+                            ${on ? "text-white" : "border-stone-300 text-stone-500 bg-white dark:bg-stone-900 dark:border-stone-700 dark:text-stone-400"}`}
+                        style={on ? { background: s.color, borderColor: s.color } : undefined}
+                        aria-pressed={on}
+                    >
+                        <span className="icon-badge h-5 w-5">
+                            <img src={s.icon} alt="" className={`w-4 h-4 object-contain ${on ? "" : "opacity-50 grayscale"}`} />
+                        </span>
+                        {scroll ? SHORT_TYPE[t] || s.label : s.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+
     const filters = (
         <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -459,27 +487,7 @@ export default function App() {
 
             <input type="search" placeholder="🔍  Χωριό ή μουσικός…" value={search} onChange={(e) => setSearch(e.target.value)} className="field" />
 
-            <div className="flex flex-wrap gap-1.5">
-                {CELEBRATION_TYPES.map((t) => {
-                    const s = styleFor(t);
-                    const on = types.has(t);
-                    return (
-                        <button
-                            key={t}
-                            onClick={() => toggleType(t)}
-                            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition
-                                ${on ? "text-white" : "border-stone-300 text-stone-500 bg-white dark:bg-stone-900 dark:border-stone-700 dark:text-stone-400"}`}
-                            style={on ? { background: s.color, borderColor: s.color } : undefined}
-                            aria-pressed={on}
-                        >
-                            <span className="icon-badge h-5 w-5">
-                                <img src={s.icon} alt="" className={`w-4 h-4 object-contain ${on ? "" : "opacity-50 grayscale"}`} />
-                            </span>
-                            {s.label}
-                        </button>
-                    );
-                })}
-            </div>
+            {typeChips()}
 
             {showFilters && (
                 <div className="space-y-3 rounded-2xl bg-stone-100/80 dark:bg-stone-900 p-3 text-sm animate-fade-in-up">
@@ -612,7 +620,7 @@ export default function App() {
                                     <div ref={listScrollRef} className="flex-1 overflow-y-auto overscroll-contain p-3">{cards}</div>
                                 </>
                             )}
-                            <footer className="border-t border-stone-200/70 dark:border-stone-800 px-4 py-2 short:py-1 short:text-[9px] text-[10px] text-stone-500">{credit}</footer>
+                            <footer className="border-t border-stone-200/70 dark:border-stone-800 px-4 py-2 short:!py-1 short:!text-[9px] text-[10px] text-stone-500">{credit}</footer>
                         </section>
                         <section className="relative min-h-0 flex-1 overflow-hidden rounded-[1.75rem] shadow-2xl ring-4 ring-white/25 dark:ring-white/10 animate-fade-in-up" style={{ animationDelay: "150ms" }}>
                             {map}
@@ -637,11 +645,41 @@ export default function App() {
                     </section>
                 </div>
             ) : (
-                // ---------- Κινητό, χάρτης ----------
+                // ---------- Κινητό, χάρτης: με φίλτρα πάνω στον χάρτη ----------
                 <div className="relative z-10 flex h-full flex-col">
                     {header}
                     <section className="relative mx-2 mb-2 min-h-0 flex-1 overflow-hidden rounded-3xl shadow-2xl ring-1 ring-white/20 animate-fade-in">
                         {map}
+                        <div className="absolute inset-x-2 top-2 z-[500] max-h-[calc(100%-6rem)] overflow-y-auto overscroll-contain rounded-2xl bg-white/90 dark:bg-stone-950/90 p-2.5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-md">
+                            {mapFiltersOpen ? (
+                                <div className="space-y-2 animate-fade-in">
+                                    {filters}
+                                    <button onClick={() => setMapFiltersOpen(false)} className="w-full rounded-full bg-stone-900 py-2 text-sm font-semibold text-white dark:bg-amber-500 dark:text-stone-900">
+                                        Δείξε στον χάρτη · {filtered.length}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <div className="min-w-0 flex-1">{typeChips(true)}</div>
+                                    <button
+                                        onClick={() => setMapFiltersOpen(true)}
+                                        className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-stone-900 px-2.5 text-xs font-semibold text-white dark:bg-amber-500 dark:text-stone-900"
+                                        aria-label="Περισσότερα φίλτρα"
+                                        title="Αναζήτηση, νομός, δήμος, ημερομηνίες"
+                                    >
+                                        <span>🔍</span><span className="hidden min-[410px]:inline">Φίλτρα</span>
+                                        {(filtersActive || search || mode !== "upcoming") && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-stone-900" />}
+                                    </button>
+                                </div>
+                            )}
+                            {!mapFiltersOpen && (
+                                <p className="mt-1.5 px-1 text-[11px] text-stone-500 dark:text-stone-400">
+                                    {filtered.length === 0
+                                        ? "Καμία εκδήλωση με αυτά τα φίλτρα"
+                                        : `${filtered.length} ${filtered.length === 1 ? "εκδήλωση" : "εκδηλώσεις"} στον χάρτη · ${({ upcoming: "επερχόμενες", weekend: "αυτό το Σαβ/κο", all: "όλες" })[mode] || ""}${search ? ` · «${search}»` : ""}`}
+                                </p>
+                            )}
+                        </div>
                     </section>
                 </div>
             )}

@@ -15,12 +15,12 @@ export default function Welcome({ photo, upcoming, villageById, linked, stats, d
             <p className="pointer-events-none absolute right-4 top-[calc(0.6rem+env(safe-area-inset-top))] max-w-[60%] truncate text-right text-[10px] uppercase tracking-[0.2em] text-white/45 drop-shadow sm:right-6">
                 <span key={photo.key} className="animate-fade-in">📷 {photo.place} · {photo.region}</span>
             </p>
-            <div className="mx-auto flex min-h-full max-w-6xl flex-col gap-8 px-5 pb-10 pt-[calc(2.5rem+env(safe-area-inset-top))] md:flex-row md:items-center md:gap-14 md:px-10 short:gap-6 short:pt-[calc(1.5rem+env(safe-area-inset-top))] short:pb-6">
+            <div className="mx-auto flex min-h-full max-w-6xl flex-col gap-8 px-5 pb-10 pt-[calc(2.5rem+env(safe-area-inset-top))] md:flex-row md:items-center md:gap-14 md:px-10 short:!gap-6 short:!pt-[calc(1.5rem+env(safe-area-inset-top))] short:!pb-6">
                 {/* Αριστερά: τίτλος & επόμενες εκδηλώσεις */}
                 <div className="min-w-0 flex-1 text-white">
                     <div className="mt-6 flex items-center gap-4 sm:gap-5 animate-fade-in-up">
-                        <img src="/icon-192.png" alt="" className="h-20 w-20 shrink-0 rounded-3xl shadow-xl ring-1 ring-white/30 sm:h-24 sm:w-24 lg:h-28 lg:w-28 short:h-16 short:w-16" />
-                        <h1 className="font-display text-5xl leading-[1.0] drop-shadow-xl sm:text-7xl lg:text-8xl short:text-5xl">
+                        <img src="/icon-192.png" alt="" className="h-20 w-20 shrink-0 rounded-3xl shadow-xl ring-1 ring-white/30 sm:h-24 sm:w-24 lg:h-28 lg:w-28 short:!h-16 short:!w-16" />
+                        <h1 className="font-display text-5xl leading-[1.0] drop-shadow-xl sm:text-7xl lg:text-8xl short:!text-5xl">
                             Πάμε<br />Πανηγύρι
                         </h1>
                     </div>
@@ -63,7 +63,7 @@ export default function Welcome({ photo, upcoming, villageById, linked, stats, d
                 </div>
 
                 {/* Δεξιά: σύνδεση */}
-                <div className="w-full md:w-[400px] md:shrink-0 short:md:w-[360px] animate-pop-in" style={{ animationDelay: "150ms" }}>
+                <div className="w-full md:w-[400px] md:shrink-0 short:md:!w-[360px] animate-pop-in" style={{ animationDelay: "150ms" }}>
                     {linked && (
                         <div className="mb-3 flex items-center gap-3 rounded-2xl bg-white/90 p-3 shadow-xl backdrop-blur dark:bg-stone-900/90 dark:text-stone-100">
                             <span className="icon-badge h-11 w-11 border-[3px]" style={{ borderColor: linkedStyle.color }}>
