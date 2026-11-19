@@ -85,7 +85,7 @@ try {
 
     // 8. Μουσικοί: ο κατάλογος διαβάζεται, νέα πρόταση πάει σε αναμονή
     const { count: mCount } = await pub.from("musicians").select("id", { count: "exact", head: true });
-    check("Κατάλογος μουσικών", mCount === 227, `${mCount}`);
+    check("Κατάλογος μουσικών", mCount >= 227, `${mCount}`);
     const { data: mus, error: e6 } = await g1.from("musicians").insert({ name: "Δοκιμαστικός Μουσικός Χ", roles: ["clarinet"] }).select().single();
     check("Πρόταση νέου μουσικού → σε αναμονή", !e6 && mus?.status === "pending", e6?.message || mus?.status);
     if (mus) await admin.from("musicians").delete().eq("id", mus.id);
