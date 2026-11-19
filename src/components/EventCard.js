@@ -1,6 +1,6 @@
 import { ROLES, STATUS_LABEL, dateParts, daysFromToday, formatDate, formatTime, relativeLabel, styleFor } from "../lib/celebrations";
 
-export function Roles({ celebration, compact = false }) {
+export function Roles({ celebration, compact = false, onArtist }) {
     const present = ROLES.filter((r) => celebration[r.key]);
     if (present.length === 0) return null;
     return (
@@ -16,7 +16,18 @@ export function Roles({ celebration, compact = false }) {
                     {r.icon
                         ? <span className="icon-badge h-5 w-5"><img src={r.icon} alt="" className="w-4 h-4 object-contain" /></span>
                         : <span>{r.emoji}</span>}
-                    <span>{compact ? <span className="text-stone-500 dark:text-stone-400">{r.label}: </span> : null}{celebration[r.key]}</span>
+                    <span>
+                        {compact ? <span className="text-stone-500 dark:text-stone-400">{r.label}: </span> : null}
+                        {onArtist ? (
+                            <button
+                                onClick={() => onArtist(celebration[r.key].trim())}
+                                className="font-medium text-amber-700 underline decoration-amber-500/40 underline-offset-2 hover:decoration-amber-500 dark:text-amber-400"
+                                title="Δείτε όλες τις εκδηλώσεις του"
+                            >
+                                {celebration[r.key]}
+                            </button>
+                        ) : celebration[r.key]}
+                    </span>
                 </li>
             ))}
         </ul>

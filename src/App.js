@@ -12,8 +12,9 @@ import Menu from "./components/Menu";
 import Welcome from "./components/Welcome";
 import Featured from "./components/Featured";
 import Gallery from "./components/Gallery";
+import ArtistPicker from "./components/ArtistPicker";
 import Backdrop, { PHOTOS, useBackdropIndex } from "./components/Backdrop";
-import { CELEBRATION_TYPES, PREFECTURES, styleFor, todayIso } from "./lib/celebrations";
+import { CELEBRATION_TYPES, FIELD_ROLE, PREFECTURES, styleFor, todayIso } from "./lib/celebrations";
 import {
     checkIsAdmin, createCelebration, deleteCelebration, isDatabaseEnabled, loadAll, loadMusicians,
     reviewCelebration, updateCelebration,
@@ -92,6 +93,8 @@ export default function App() {
     const [region, setRegion] = useState(""); // δήμος
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
+    const [artists, setArtists] = useState([]); // επιλεγμένοι καλλιτέχνες (ονόματα)
+    const [artistsOpen, setArtistsOpen] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     // Κινητό, χάρτης: ανοιχτό το πλήρες πάνελ φίλτρων πάνω στον χάρτη;
     const [mapFiltersOpen, setMapFiltersOpen] = useState(false);
@@ -192,7 +195,8 @@ export default function App() {
     }, [dateFrom, dateTo, mode]);
     const hasDateFilter = Boolean(dateFrom || dateTo);
 
-    const filtered = useMemo(() => {
+    // Όλα τα φίλτρα εκτός από τους καλλιτέχνες (από εδώ μετράμε και πόσες εκδηλώσεις έχει ο καθένας)
+    const baseFiltered = useMemo(() => {
         const today = todayIso();
         const q = normalize(search.trim());
         return visible
@@ -216,6 +220,27 @@ export default function App() {
                 (villageById[a.village_id]?.name || "").localeCompare(villageById[b.village_id]?.name || "", "el")
             );
     }, [visible, mode, hasDateFilter, rangeStart, rangeEnd, types, prefecture, region, search, villageById]);
+
+    // Καλλιτέχνες που εμφανίζονται στις εκδηλώσεις, με πλήθος εκδηλώσεων και ρόλους
+    const artistIndex = useMemo(() => {
+        const idx = new Map();
+        for (const c of baseFiltered) {
+            for (const [field, role] of Object.entries(FIELD_ROLE)) {
+                const name = c[field]?.trim();
+                if (!name) continue;
+                const a = idx.get(name) || { name, count: 0, roles: new Set() };
+                a.count++;
+                a.roles.add(role);
+                idx.set(name, a);
+            }
+        }
+        return [...idx.values()];
+    }, [baseFiltered]);
+
+    const filtered = useMemo(
+        () => (artists.length ? baseFiltered.filter((c) => Object.keys(FIELD_ROLE).some((f) => artists.includes(c[f]?.trim()))) : baseFiltered),
+        [baseFiltered, artists]
+    );
 
     const eventsByVillage = useMemo(() => {
         const map = {};
@@ -258,8 +283,17 @@ export default function App() {
         setPrefecture("");
         setRegion("");
         setTypes(new Set(CELEBRATION_TYPES));
+        setArtists([]);
     };
-    const filtersActive = Boolean(search || hasDateFilter || prefecture || region || types.size !== CELEBRATION_TYPES.length);
+    const filtersActive = Boolean(search || hasDateFilter || prefecture || region || artists.length || types.size !== CELEBRATION_TYPES.length);
+    // Από την καρτέλα εκδήλωσης: «δείξε μου όλες τις εμφανίσεις αυτού του καλλιτέχνη»
+    const showArtist = (name) => {
+        setArtists([name]);
+        setArtistsOpen(false);
+        setSearch("");
+        setDetailId(null);
+        setTimeout(() => listScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 30);
+    };
 
     const canWrite = isDatabaseEnabled && source === "db" && Boolean(user);
     const detail = detailId ? celebrations.find((c) => String(c.id) === detailId) : null;
@@ -489,6 +523,36 @@ export default function App() {
 
             {typeChips()}
 
+            {/* Καλλιτέχνες: επιλογή ενός ή περισσότερων → μόνο οι εκδηλώσεις όπου θα βρίσκονται */}
+            <div className="rounded-2xl bg-stone-100/80 dark:bg-stone-900 p-2">
+                <button
+                    onClick={() => setArtistsOpen((o) => !o)}
+                    className="flex w-full items-center justify-between gap-2 rounded-xl px-1.5 py-1 text-sm font-semibold text-stone-800 dark:text-stone-100"
+                    aria-expanded={artistsOpen}
+                >
+                    <span>🎤 Καλλιτέχνες{artists.length ? <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[11px] text-stone-900">{artists.length}</span> : null}</span>
+                    <span className="text-xs font-normal text-stone-500">{artistsOpen ? "κλείσιμο ▴" : artists.length ? "αλλαγή ▾" : "επιλογή ▾"}</span>
+                </button>
+                {artistsOpen ? (
+                    <div className="mt-2 animate-fade-in">
+                        <ArtistPicker
+                            artists={artistIndex}
+                            catalog={musicians.filter((m) => (m.status ?? "approved") === "approved")}
+                            selected={artists}
+                            onChange={setArtists}
+                        />
+                    </div>
+                ) : artists.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5 px-1">
+                        {artists.map((n) => (
+                            <button key={n} onClick={() => setArtists(artists.filter((x) => x !== n))} className="rounded-full bg-amber-500 py-1 pl-2.5 pr-2 text-xs font-semibold text-stone-900" aria-label={`Αφαίρεση ${n}`}>
+                                {n} <span className="text-stone-900/60">✕</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
             {showFilters && (
                 <div className="space-y-3 rounded-2xl bg-stone-100/80 dark:bg-stone-900 p-3 text-sm animate-fade-in-up">
                     <div className="grid grid-cols-2 gap-2">
@@ -676,7 +740,7 @@ export default function App() {
                                 <p className="mt-1.5 px-1 text-[11px] text-stone-500 dark:text-stone-400">
                                     {filtered.length === 0
                                         ? "Καμία εκδήλωση με αυτά τα φίλτρα"
-                                        : `${filtered.length} ${filtered.length === 1 ? "εκδήλωση" : "εκδηλώσεις"} στον χάρτη · ${({ upcoming: "επερχόμενες", weekend: "αυτό το Σαβ/κο", all: "όλες" })[mode] || ""}${search ? ` · «${search}»` : ""}`}
+                                        : `${filtered.length} ${filtered.length === 1 ? "εκδήλωση" : "εκδηλώσεις"} στον χάρτη · ${({ upcoming: "επερχόμενες", weekend: "αυτό το Σαβ/κο", all: "όλες" })[mode] || ""}${search ? ` · «${search}»` : ""}${artists.length ? ` · 🎤 ${artists.join(", ")}` : ""}`}
                                 </p>
                             )}
                         </div>
@@ -732,6 +796,7 @@ export default function App() {
                     onEdit={() => { setFormFor(detail); closeDetail(); }}
                     onShowOnMap={() => { const v = detail.village_id; closeDetail(); setMobileView("map"); setSelectedVillageId(null); setTimeout(() => setSelectedVillageId(v), 0); }}
                     onReview={review}
+                    onArtist={showArtist}
                     onClose={closeDetail}
                     notify={notify}
                 />

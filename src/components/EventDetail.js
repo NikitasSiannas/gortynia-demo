@@ -17,7 +17,7 @@ function ActionButton({ onClick, href, icon, children, primary = false }) {
         : <button type="button" onClick={onClick} className={cls}>{body}</button>;
 }
 
-export default function EventDetail({ celebration, village, canEdit, isAdmin, onEdit, onShowOnMap, onReview, onClose, notify }) {
+export default function EventDetail({ celebration, village, canEdit, isAdmin, onEdit, onShowOnMap, onReview, onArtist, onClose, notify }) {
     const s = styleFor(celebration.celebration_type);
     const [panel, setPanel] = useState(null); // null | "share" | "calendar"
     const [busy, setBusy] = useState(false);
@@ -86,7 +86,7 @@ export default function EventDetail({ celebration, village, canEdit, isAdmin, on
 
                 {celebration.notes && <p className="rounded-2xl bg-stone-50 dark:bg-stone-800/60 p-3 text-sm italic text-stone-600 dark:text-stone-300">{celebration.notes}</p>}
 
-                <div className="text-sm text-stone-700 dark:text-stone-200"><Roles celebration={celebration} compact /></div>
+                <div className="text-sm text-stone-700 dark:text-stone-200"><Roles celebration={celebration} compact onArtist={onArtist} /></div>
 
                 {isAdmin && celebration.created_by && (
                     <div className="rounded-2xl border border-amber-300/60 bg-amber-50/60 dark:bg-amber-500/10 p-3 text-sm">
