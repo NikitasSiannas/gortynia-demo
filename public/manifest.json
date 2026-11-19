@@ -13,7 +13,7 @@
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "theme_color": "#1c1917",
   "background_color": "#1c1917",
   "categories": ["events", "travel", "entertainment"]

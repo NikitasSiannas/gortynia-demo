@@ -37,7 +37,7 @@ export default function Menu({
         <div className="relative" ref={ref}>
             <button
                 onClick={() => setOpen((o) => !o)}
-                className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/20 font-semibold uppercase text-white backdrop-blur-md ring-1 ring-white/40 hover:bg-white/30 transition"
+                className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/20 font-semibold uppercase text-white backdrop-blur-md ring-1 ring-white/40 hover:bg-white/30 transition"
                 aria-label="Μενού"
                 aria-expanded={open}
             >

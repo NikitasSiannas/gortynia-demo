@@ -1,5 +1,5 @@
 /* Service worker: λειτουργία χωρίς σύνδεση (βασική) και ειδοποιήσεις push. */
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `static-${VERSION}`;
 const PAGES_CACHE = `pages-${VERSION}`;
 

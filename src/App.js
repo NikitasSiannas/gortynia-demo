@@ -22,16 +22,15 @@ import { signOut, useAuth } from "./lib/useAuth";
 import { useTheme } from "./lib/theme";
 import { isIos, useInstallPrompt } from "./lib/pwa";
 
-// Σε οθόνες ≥768px (md) λίστα και χάρτης φαίνονται μαζί
-function useIsDesktop() {
-    const query = "(min-width: 768px)";
+// Γενικό: ταιριάζει η οθόνη με ένα media query; (ενημερώνεται όταν γυρίζει το κινητό)
+function useMedia(query) {
     const [match, setMatch] = useState(() => window.matchMedia(query).matches);
     useEffect(() => {
         const mq = window.matchMedia(query);
         const onChange = () => setMatch(mq.matches);
         mq.addEventListener("change", onChange);
         return () => mq.removeEventListener("change", onChange);
-    }, []);
+    }, [query]);
     return match;
 }
 
@@ -68,7 +67,10 @@ const writeFlag = (k, store = localStorage) => { try { store.setItem(k, "1"); } 
 export default function App() {
     const { user, ready } = useAuth();
     const theme = useTheme();
-    const isDesktop = useIsDesktop();
+    // Σε οθόνες ≥768px πλάτος λίστα και χάρτης φαίνονται δίπλα-δίπλα (υπολογιστής, tablet, κινητό στο πλάι)
+    const isDesktop = useMedia("(min-width: 768px)");
+    // Χαμηλή οθόνη (κινητό γυρισμένο στο πλάι): συμπαγής διάταξη ώστε να χωράει η λίστα
+    const isShort = useMedia("(max-height: 559px)");
     const [galleryOpen, setGalleryOpen] = useState(false);
     const [bgIndex, setBgIndex] = useBackdropIndex(galleryOpen);
     const installer = useInstallPrompt();
@@ -367,27 +369,26 @@ export default function App() {
 
     // ---------- Κομμάτια της κεντρικής οθόνης ----------
     const header = (
-        <header className="relative z-20 flex items-center justify-between gap-2 px-4 sm:px-6 pt-[calc(1rem+env(safe-area-inset-top))] pb-2 text-white">
+        <header className="relative z-20 flex items-center justify-between gap-2 px-4 sm:px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] [@media(max-height:559px)]:pt-[calc(1.1rem+env(safe-area-inset-top))] pb-2 text-white">
+            {/* Πού είναι η φωτογραφία του φόντου — διακριτικά, στην πάνω δεξιά άκρη */}
+            <p className="pointer-events-none absolute right-4 top-[calc(0.3rem+env(safe-area-inset-top))] max-w-[55%] truncate text-right text-[9px] uppercase tracking-[0.2em] text-white/40 drop-shadow sm:right-6 sm:text-[10px]">
+                <span key={photo.key} className="animate-fade-in">📷 {photo.place} · {photo.region}</span>
+            </p>
             {/* Logo + τίτλος = κουμπί "Αρχική" */}
-            <button onClick={goHome} className="group flex min-w-0 items-center gap-2.5 text-left animate-fade-in-down" aria-label="Αρχική">
-                <img src="/icon-192.png" alt="" className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-xl shadow-lg ring-1 ring-white/30 transition group-hover:scale-105 group-active:scale-95" />
-                <div className="min-w-0">
-                    <h1 className="font-display text-[1.6rem] sm:text-3xl leading-none drop-shadow-lg truncate">Πάμε Πανηγύρι</h1>
-                    <p className="mt-1 text-[10px] sm:text-[11px] uppercase tracking-[0.25em] text-amber-200/90 truncate">
-                        <span key={photo.key} className="animate-fade-in">{photo.region} · {photo.place}</span>
-                    </p>
-                </div>
+            <button onClick={goHome} className="group flex min-w-0 items-center gap-2 sm:gap-2.5 text-left animate-fade-in-down" aria-label="Αρχική">
+                <img src="/icon-192.png" alt="" className="h-9 w-9 sm:h-11 sm:w-11 shrink-0 rounded-xl shadow-lg ring-1 ring-white/30 transition group-hover:scale-105 group-active:scale-95" />
+                <h1 className="min-w-0 font-display text-[1.25rem] min-[380px]:text-[1.45rem] sm:text-3xl leading-none drop-shadow-lg truncate">Πάμε Πανηγύρι</h1>
             </button>
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 animate-fade-in-down" style={{ animationDelay: "120ms" }}>
+            <div className="flex shrink-0 items-center gap-1 min-[380px]:gap-1.5 sm:gap-2 animate-fade-in-down" style={{ animationDelay: "120ms" }}>
                 {canWrite && (
-                    <button onClick={openNewEvent} className="btn-accent px-3 sm:px-4" aria-label="Νέα εκδήλωση">
+                    <button onClick={openNewEvent} className="btn-accent hidden sm:inline-flex px-4" aria-label="Νέα εκδήλωση">
                         <span className="text-lg leading-none">＋</span>
-                        <span className="hidden sm:inline">Νέα εκδήλωση</span>
+                        <span>Νέα εκδήλωση</span>
                     </button>
                 )}
                 <button
                     onClick={() => setGalleryOpen(true)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-md ring-1 ring-white/40 hover:bg-white/30 transition"
+                    className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-md ring-1 ring-white/40 hover:bg-white/30 transition"
                     aria-label="Φωτογραφίες"
                     title="Δείτε τις φωτογραφίες"
                 >
@@ -395,7 +396,7 @@ export default function App() {
                 </button>
                 <button
                     onClick={() => setNotifOpen(true)}
-                    className="hidden sm:flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-md ring-1 ring-white/40 hover:bg-white/30 transition"
+                    className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-md ring-1 ring-white/40 hover:bg-white/30 transition"
                     aria-label="Ειδοποιήσεις"
                 >
                     🔔
@@ -589,17 +590,29 @@ export default function App() {
                 // ---------- Υπολογιστής: εξώφυλλο με φωτογραφία, από κάτω λίστα + χάρτης ----------
                 <div className="relative z-10 flex h-full flex-col">
                     {header}
-                    <div className="px-6 pb-4 space-y-3">
-                        {heroText}
-                        <div className="hidden [@media(min-height:760px)]:block">
-                            <Featured events={upcoming.slice(0, 8)} villageById={villageById} onOpen={openDetail} />
+                    {!isShort && (
+                        <div className="px-6 pb-4 space-y-3">
+                            {heroText}
+                            <div className="hidden [@media(min-height:760px)]:block">
+                                <Featured events={upcoming.slice(0, 8)} villageById={villageById} onOpen={openDetail} />
+                            </div>
                         </div>
-                    </div>
-                    <main className="flex min-h-0 flex-1 gap-5 px-6 pb-6">
-                        <section className="flex w-[430px] lg:w-[460px] shrink-0 flex-col overflow-hidden rounded-[1.75rem] bg-white/80 dark:bg-stone-950/80 backdrop-blur-lg shadow-2xl ring-1 ring-white/50 dark:ring-white/10 animate-fade-in-up">
-                            <div className="border-b border-stone-200/70 dark:border-stone-800 p-4">{filters}</div>
-                            <div ref={listScrollRef} className="flex-1 overflow-y-auto overscroll-contain p-3">{cards}</div>
-                            <footer className="border-t border-stone-200/70 dark:border-stone-800 px-4 py-2 text-[10px] text-stone-500">{credit}</footer>
+                    )}
+                    <main className={`flex min-h-0 flex-1 ${isShort ? "gap-3 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]" : "gap-5 px-6 pb-6"}`}>
+                        <section className={`flex ${isShort ? "w-[340px] rounded-2xl" : "w-[430px] lg:w-[460px] rounded-[1.75rem]"} shrink-0 flex-col overflow-hidden bg-white/80 dark:bg-stone-950/80 backdrop-blur-lg shadow-2xl ring-1 ring-white/50 dark:ring-white/10 animate-fade-in-up`}>
+                            {isShort ? (
+                                // Χαμηλή οθόνη: τα φίλτρα κυλάνε μαζί με τη λίστα, ώστε να φαίνονται εκδηλώσεις
+                                <div ref={listScrollRef} className="flex-1 overflow-y-auto overscroll-contain">
+                                    <div className="border-b border-stone-200/70 dark:border-stone-800 p-3">{filters}</div>
+                                    <div className="p-3">{cards}</div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="border-b border-stone-200/70 dark:border-stone-800 p-4">{filters}</div>
+                                    <div ref={listScrollRef} className="flex-1 overflow-y-auto overscroll-contain p-3">{cards}</div>
+                                </>
+                            )}
+                            <footer className="border-t border-stone-200/70 dark:border-stone-800 px-4 py-2 short:py-1 short:text-[9px] text-[10px] text-stone-500">{credit}</footer>
                         </section>
                         <section className="relative min-h-0 flex-1 overflow-hidden rounded-[1.75rem] shadow-2xl ring-4 ring-white/25 dark:ring-white/10 animate-fade-in-up" style={{ animationDelay: "150ms" }}>
                             {map}
@@ -633,6 +646,18 @@ export default function App() {
                 </div>
             )}
 
+            {/* Κινητό: «Νέα εκδήλωση» ως στρογγυλό κουμπί κάτω δεξιά, πάντα διαθέσιμο (λίστα & χάρτης) */}
+            {!isDesktop && canWrite && (
+                <button
+                    onClick={openNewEvent}
+                    className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[901] flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-2xl font-semibold text-stone-900 shadow-2xl shadow-amber-900/40 ring-2 ring-white/70 transition active:scale-95 animate-fade-in-up"
+                    aria-label="Νέα εκδήλωση"
+                    title="Νέα εκδήλωση"
+                >
+                    ＋
+                </button>
+            )}
+
             {/* Εναλλαγή Λίστα/Χάρτης σε κινητό */}
             {!isDesktop && (
                 <nav className="pointer-events-none fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[900] flex justify-center animate-fade-in-up">
@@ -645,7 +670,7 @@ export default function App() {
                             <button
                                 key={v}
                                 onClick={() => setMobileView(v)}
-                                className={`relative z-10 w-28 rounded-full py-2 transition ${mobileView === v ? "text-stone-900" : "text-white/80"}`}
+                                className={`relative z-10 w-24 min-[380px]:w-28 rounded-full py-2 transition ${mobileView === v ? "text-stone-900" : "text-white/80"}`}
                             >
                                 {label}
                             </button>
